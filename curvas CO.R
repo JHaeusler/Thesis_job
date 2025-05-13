@@ -1,9 +1,9 @@
-
-N <- c(500)
-n <- c(50, 100, 150, 200, 300, 400)
-c <- c(0, 2, 5, 10, 20, 40, 60, 100, 200, 400)
-n1 <- c(20, 50, 60, 100, 200, 300, 400)
-c1 <- c(0, 2, 10, 40, 100, 200, 300)
+# parámtros dados en # Facchinetti, S. 2022
+N <- c(1000)
+n <- c(50, 100, 150, 200, 250) 
+c <- c(0, 1, 2, 3, 4)
+n1 <- c(100) # n fijo
+c1 <- c(3)  # c fijo
 prop <- seq(0, 1, 0.01)
 
 cols <- c("aquamarine4", "aquamarine3", "aquamarine2", "cadetblue2", "chartreuse4",
