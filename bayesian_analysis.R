@@ -14,3 +14,9 @@ for (paquete in lista_de_paquetes) {
 data1 <- read_excel("Acceptance Sampling MIL-STD 105E for Quality Control.xlsx",
                     sheet = "tab")
 data2 <- read_excel("Jurnal Rekavasi.xlsx", sheet = "tabla")
+
+
+
+
+
+
