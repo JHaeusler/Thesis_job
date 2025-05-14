@@ -58,4 +58,14 @@ while(i < total_iterations){
   return(samples, acceptance_rate)
 }
 
+#---- Instrtumental Distribution ----
+
+# Proposal: Product of two log-noraml distributions
+proposal_sampler <- function(y){
+  mu1 <- log(y[1]); sigma1 <- 0.1 # Parameters of the Log-Normal for Alpha
+  mu2 <- log(y[2]); sigma1 <- 0.1 # Parameters of the Log-Normal for Beta
+  alpha_proposed <- rlognormal(mean=mu1, sigma=sigma1)
+  beta_proposed <- rlognormal(mean=mu2, sigma=sigma2)
+}
+
 
