@@ -1,8 +1,13 @@
 # Trabajo Investigación ----
 
-library(pracma)
-library(GA)
-library(AcceptanceSampling)
+lista_de_paquetes <- c("pracma", "GA", "AcceptanceSampling", "tidyverse") # Reemplaza con tus paquetes
+
+for (paquete in lista_de_paquetes) {
+  if(!require(paquete, character.only = TRUE)){
+    install.packages(paquete)
+    require(paquete, character.only = TRUE)
+  }
+}
 
 # semilla
 set.seed(123)
@@ -38,7 +43,7 @@ decode <- function(string){
 # funciones auxiliares:
 # Pa calcula la dist acum de hyper.
 Pa <- function(n, c, p){
-  Pa = phyper(c, N*p, N*(1-p), n)
+  Pa = phyper(c, N*p, N*(1-p), n) # COO tipo A
   return(Pa)
 }
 
@@ -66,29 +71,36 @@ b2 <- decimal2binary(max(Ran.c)); l2 <- length(b2)
 # solución mediante AcceptanceSampling (clásico)
 plan <- find.plan(PRP = c(AQL, 1 - alpha_des),
                   CRP = c(LTPD, beta_des),
-                  N=N, type = "hypergeom"); plan$n; plan$c
+                  N=N, type = "hypergeom") #; plan$n; plan$c
 
+# fitness function
 fit_ <- function(string, dens_n, dens_u, N){
   par <- decode(string)
   n <- par[1]; c <- par[2]
   
+  # Riesgo Ponderado para algunas distribuciones dadas
   wr_dist <- (integral(f = function(p) wr_p(n, c, dens_n, p),
                        xmin = 0, xmax = AQL, method = "Kron") +
                 integral(f = function(p) wr_c(n, c, dens_n, p),
                          xmin = LTPD, xmax = 1, method = "Kron"))
+  
+  # Riesgo ponderado, asignando principio de equiporbabilidad
   wr_unif <- (integral(f = function(p) wr_p(n, c, dens_u, p),
                        xmin = 0, xmax = AQL, method = "Kron") +
                 integral(f = function(p) wr_c(n, c, dens_u, p),
                          xmin = LTPD, xmax = 1, method = "Kron"))
   
-  fit_ <- 100 -(n/N + (wr_unif/wr_dist))
+  # fit_ <- 1000 -((c/n)*N + (wr_dist/wr_unif))
+  # fit_ <- 1000 -((c/n)*N + (wr_dist-wr_unif)^2)
+  fit_ <- 00
+  #fit_ <- 
 }                    
 
 # Ejecución algoritmo genético
 
 Genetic_A <- ga(type = "binary", nBits = l1 + l2,
                 fitness = function(string) fit_(string, dens_n, dens_u, N),
-                popSize = 300, maxiter = 400, run = 50, pmutation=0.01)
+                popSize = 300, maxiter = 400, run = 100, pmutation=0.01)
 
 # Solución encontrada
 Sol_ga = decode(Genetic_A@solution)#; sols[g, 1] <- Sol_ga[1]; sols[g, 2] <- Sol_ga[2]
@@ -102,7 +114,7 @@ Sol_ga[1]; Sol_ga[2]
 #- fit_
 #--- por ajustar ----
 # plot
-x11(); plot(Genetic_A, ylim = c(80,100))
+x11(); plot(Genetic_A)
 prop <- seq(0, LTPD + 0.05, 0.001); prop
 
 lab1 <- paste("clásico (", plan$n, ", ", plan$c,")")
