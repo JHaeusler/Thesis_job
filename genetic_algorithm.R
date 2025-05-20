@@ -13,12 +13,12 @@ for (paquete in lista_de_paquetes) {
 set.seed(123)
 
 # Parámetros de entrada
-N <- 500; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.025; beta_des <- 0.075
+N <- 1000; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.05; beta_des <- 0.10
 
 # Ajuste de la densidad a trabajar
 
 # densidad normal
-quant <- 0.3 # cuantil
+quant <- 0.9973 # cuantil
 
 par1 <- AQL/(3.5 + qnorm(quant))  # sigma
 par2<- AQL - qnorm(quant)*par1 # mu
@@ -90,9 +90,9 @@ fit_ <- function(string, dens_n, dens_u, N){
                 integral(f = function(p) wr_c(n, c, dens_u, p),
                          xmin = LTPD, xmax = 1, method = "Kron"))
   
-  # fit_ <- 1000 -((c/n)*N + (wr_dist/wr_unif))
+  fit_ <- 
   # fit_ <- 1000 -((c/n)*N + (wr_dist-wr_unif)^2)
-  fit_ <- 00
+  #fit_ <- 00
   #fit_ <- 
 }                    
 
