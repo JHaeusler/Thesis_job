@@ -71,7 +71,7 @@ b2 <- decimal2binary(max(Ran.c)); l2 <- length(b2)
 # solución mediante AcceptanceSampling (clásico)
 plan <- find.plan(PRP = c(AQL, 1 - alpha_des),
                   CRP = c(LTPD, beta_des),
-                  N=N, type = "hypergeom") #; plan$n; plan$c
+                  N=N, type = "hypergeom") ; plan$n; plan$c
 
 # fitness function
 fit_ <- function(string, dens_n, dens_u, N){

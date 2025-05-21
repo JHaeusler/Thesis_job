@@ -66,16 +66,28 @@ n.opt=1:300;c.opt=0:300; Esc=expand.grid(c.opt=c.opt,n.opt=n.opt);rm(n.opt,c.opt
 for(i in 1:nrow(Esc)){
 
   Esc[i,3]=calc_wr(Esc[i,2],Esc[i,1],dens_n,N,AQL,LTPD)
+  Esc[i,4]=calc_wr(Esc[i,2],Esc[i,1],dens_n1,N,AQL,LTPD)
+  Esc[i,5]=calc_wr(Esc[i,2],Esc[i,1],dens_n2,N,AQL,LTPD)
 }
 
 ggplot(Esc, aes(x = n.opt, y = c.opt, fill = V3)) +
   geom_tile() +
   geom_tile(color = "white",
-            lwd = 0.0025,
+            lwd = 0.5,
             linetype = 2) +
   coord_fixed()
-
-
+ggplot(Esc, aes(x = n.opt, y = c.opt, fill = V4)) +
+  geom_tile() +
+  geom_tile(color = "white",
+            lwd = 0.5,
+            linetype = 2) +
+  coord_fixed()
+ggplot(Esc, aes(x = n.opt, y = c.opt, fill = V5)) +
+  geom_tile() +
+  geom_tile(color = "white",
+            lwd = 0.5,
+            linetype = 2) +
+  coord_fixed()
 
 
 # Ajuste de la densidad a trabajar
