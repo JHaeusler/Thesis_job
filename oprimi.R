@@ -31,7 +31,7 @@ dens_3 <- parse(text = paste(paste(
   paste("dunif(p",sep=""),
   par31, par32, sep=","),")", sep = "")) 
 
-
+### ###
 par41 <- 0; par42 <- 0.2
 dens_4 <- parse(text = paste(paste(
   paste("dunif(p",sep=""),
@@ -124,13 +124,18 @@ Esc_resaltado <- Esc %>%
   )
 
 # print(Esc_resaltado %>% filter(es_riesgo_critico10 == TRUE))
+valores_n_opt <- sort(unique(Esc$n.opt))
+breaks_n <- c(1, seq(5, max(valores_n_opt, na.rm = TRUE), by = 5))
+breaks_n_final <- intersect(breaks_n, valores_n_opt)
+
+col_sel <- Esc$V9
 
 x11()
 ggplot(data = Esc_resaltado, aes(x = as.factor(n.opt), y = as.factor(c.opt),
-                                 fill = V10)) +
+                                 fill = V6)) +
   geom_tile(
-    aes(color = es_riesgo_critico10), # Mapea el color del borde a la nueva variable
-    linewidth = ifelse(Esc_resaltado$es_riesgo_critico10, 0.5, 0.2) # Grosor del borde: 1.5 si TRUE, 0.5 si FALSE
+    aes(color = es_riesgo_critico6), # Mapea el color del borde a la nueva variable
+    linewidth = ifelse(Esc_resaltado$es_riesgo_critico6, 0.5, 0.2) # Grosor del borde: 1.5 si TRUE, 0.5 si FALSE
   ) +
   scale_fill_viridis_c(
     option = "cividis",
@@ -142,6 +147,9 @@ ggplot(data = Esc_resaltado, aes(x = as.factor(n.opt), y = as.factor(c.opt),
     values = c("TRUE" = "red", "FALSE" = "white"), # Color rojo para el borde de celdas críticas, blanco para el resto
     guide = "none" # Desactiva la leyenda para el color del borde, ya que es auxiliar
   ) +
+  scale_x_discrete(breaks = breaks_n_final) + # Muestra solo la primera etiqueta
+  # Agrega esto para controlar las etiquetas del eje Y
+  scale_y_discrete(breaks = function(x) x[seq(1, length(x), by = 5)]) +
   labs(
     title = "Riesgo ponderado planes de muestreo simples para atributos",
     subtitle = paste0("Planes n, c (Riesgo Crítico menor a ", limite_superior_resaltado, ")"),
@@ -156,21 +164,49 @@ ggplot(data = Esc_resaltado, aes(x = as.factor(n.opt), y = as.factor(c.opt),
   )
 
 
+jujuj <- Esc$V6
+cumplen <- which(jujuj >= limite_inferior_resaltado & jujuj <= limite_superior_resaltado)
+n_cumplen <- Esc[cumplen, 2]; c_cumplen <- Esc[cumplen, 1] 
+
+prop <- seq(0, 1, 0.01)
+# 6 <- 4
+x11()
+plot(prop, phyper(c_cumplen[1], N*prop, N[1]*(1 - prop), n_cumplen[1]), lty = 1,
+     main = paste("CCO (Tipo A) de un lote de tamaño N=", N[1], "\n",
+                  "p_est ~ Uniforme(", par11, ", " ,par12,")", sep = ""), type = "l",
+     col = "darkolivegreen3", ylab = "Pa", xlab = "p")
+for (resp in 2:(length(cumplen-1))) {
+  lines(prop, phyper(c_cumplen[resp], N[1]*prop,N[1]*(1 - prop), n_cumplen[resp]), lty = 1,
+      col = "aquamarine4")
+}
+legend(x = "topright", legend = paste("n=", n_cumplen, "c=", c_cumplen), col = "aquamarine4", 
+       title = "Criterio", lty= 1, box.lty = 0, bg = NA)
+# abline(v=c(0.05, 0.10), lty = 3, col = c("burlywood4"))
+segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1.5, lty = 3, col = c("burlywood4"))
+segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1.5, lty = 3, col = c("burlywood4"))
+abline(v= 0, h= c(0,1), lty = 1, col = c("azure3"))
+text(x= 0.05, y= -0.02, label= "AQL", cex = 0.6)
+text(x= 0.10, y= -0.02, label= "LTPD", cex = 0.6)
+
+
+
+# text(x=0.042, y = 0.6, label = "c = 3", col = "darkorchid")
 
 
 
 ggplot(data = Esc, aes(x = as.factor(n.opt), y = as.factor(c.opt),
-                       fill = V6)) +
+                       fill = col_sel)) +
   geom_tile(color = "white", size = 0.05) + # Dibuja las celdas, con un borde blanco
   #geom_text(aes(label = round(V6, 3)), color = "black", size = 1.7) +
   scale_fill_viridis_c(option = "cividis", name = "Riesgo ponderado",
                        breaks = seq(0,1, 0.1)) +#,
                        #labels = as.character(seq(0,1, 0.01))) + # Escala de color para la medida continua
+
   labs(
-    title = "Riesgo ponderado planes de muestreo simples para atributos",
-    subtitle = "planes n, c",
-    x = "n",
-    y = "c"
+  title = "Riesgo ponderado planes de muestreo simples para atributos",
+  subtitle = "planes n, c",
+  x = "n",
+  y = "c"
   ) +
   theme_minimal() + # Un tema limpio
   theme(
