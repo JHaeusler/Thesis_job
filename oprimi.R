@@ -168,15 +168,16 @@ jujuj <- Esc$V6
 cumplen <- which(jujuj >= limite_inferior_resaltado & jujuj <= limite_superior_resaltado)
 n_cumplen <- Esc[cumplen, 2]; c_cumplen <- Esc[cumplen, 1] 
 
-prop <- seq(0, 1, 0.01)
+p <- seq(0, 1, 0.01)
 # 6 <- 4
 x11()
-plot(prop, phyper(c_cumplen[1], N*prop, N[1]*(1 - prop), n_cumplen[1]), lty = 1,
+layout(matrix(c(rep(1,6), rep(2,3)), nrow=3, byrow=T))
+plot(p, phyper(c_cumplen[1], N*p, N[1]*(1 - p), n_cumplen[1]), lty = 1,
      main = paste("CCO (Tipo A) de un lote de tamaño N=", N[1], "\n",
-                  "p_est ~ Uniforme(", par11, ", " ,par12,")", sep = ""), type = "l",
-     col = "darkolivegreen3", ylab = "Pa", xlab = "p")
+                  "p_est ~ Uniforme(", par81, ", " ,par82,")", sep = ""), type = "l",
+     col = "darkolivegreen3", ylab = "Pa", xlab = "p")#, xlim = c(0, 0.20))
 for (resp in 2:(length(cumplen-1))) {
-  lines(prop, phyper(c_cumplen[resp], N[1]*prop,N[1]*(1 - prop), n_cumplen[resp]), lty = 1,
+  lines(p, phyper(c_cumplen[resp], N[1]*p,N[1]*(1 - p), n_cumplen[resp]), lty = 1,
       col = "aquamarine4")
 }
 legend(x = "topright", legend = paste("n=", n_cumplen, "c=", c_cumplen), col = "aquamarine4", 
@@ -188,32 +189,35 @@ abline(v= 0, h= c(0,1), lty = 1, col = c("azure3"))
 text(x= 0.05, y= -0.02, label= "AQL", cex = 0.6)
 text(x= 0.10, y= -0.02, label= "LTPD", cex = 0.6)
 
+plot(p, eval(dens_8), type="l", xlab= "p", ylab= expression(f[p]))#, xlim =c(0, 0.20))
+segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1.5, lty = 3, col = c("burlywood4"))
+segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1.5, lty = 3, col = c("burlywood4"))
 
 
 # text(x=0.042, y = 0.6, label = "c = 3", col = "darkorchid")
 
 
-
-ggplot(data = Esc, aes(x = as.factor(n.opt), y = as.factor(c.opt),
-                       fill = col_sel)) +
-  geom_tile(color = "white", size = 0.05) + # Dibuja las celdas, con un borde blanco
-  #geom_text(aes(label = round(V6, 3)), color = "black", size = 1.7) +
-  scale_fill_viridis_c(option = "cividis", name = "Riesgo ponderado",
-                       breaks = seq(0,1, 0.1)) +#,
-                       #labels = as.character(seq(0,1, 0.01))) + # Escala de color para la medida continua
-
-  labs(
-  title = "Riesgo ponderado planes de muestreo simples para atributos",
-  subtitle = "planes n, c",
-  x = "n",
-  y = "c"
-  ) +
-  theme_minimal() + # Un tema limpio
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    plot.subtitle = element_text(hjust = 0.5),
-    axis.text.x = element_text(angle = 0, hjust = 1) # Rota las etiquetas del eje X si son largas
-  )
+# 
+# ggplot(data = Esc, aes(x = as.factor(n.opt), y = as.factor(c.opt),
+#                        fill = col_sel)) +
+#   geom_tile(color = "white", size = 0.05) + # Dibuja las celdas, con un borde blanco
+#   #geom_text(aes(label = round(V6, 3)), color = "black", size = 1.7) +
+#   scale_fill_viridis_c(option = "cividis", name = "Riesgo ponderado",
+#                        breaks = seq(0,1, 0.1)) +#,
+#                        #labels = as.character(seq(0,1, 0.01))) + # Escala de color para la medida continua
+# 
+#   labs(
+#   title = "Riesgo ponderado planes de muestreo simples para atributos",
+#   subtitle = "planes n, c",
+#   x = "n",
+#   y = "c"
+#   ) +
+#   theme_minimal() + # Un tema limpio
+#   theme(
+#     plot.title = element_text(hjust = 0.5, face = "bold"),
+#     plot.subtitle = element_text(hjust = 0.5),
+#     axis.text.x = element_text(angle = 0, hjust = 1) # Rota las etiquetas del eje X si son largas
+#   )
 # x11()
 # ggplot(data = Esc, aes(x = as.factor(n.opt), y = as.factor(c.opt),
 #                        fill = V4)) +
