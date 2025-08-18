@@ -17,7 +17,7 @@ set.seed(123)
 cols_a <- c("chocolate", "chartreuse4", "chartreuse3", "coral3", "coral1",
             "aquamarine4", "antiquewhite4")
 #---- Parámetros de entrada ----
-N <- 80; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.05; beta_des <- 0.10
+N <- 150; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.05; beta_des <- 0.10
 par11 <- 0; par12 <- 0.05
 dens_1 <- parse(text = paste(paste(
   paste("dunif(p",sep=""),
