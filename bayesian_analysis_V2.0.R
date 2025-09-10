@@ -17,7 +17,7 @@ for (paquete in lista_de_paquetes) {
 library(boot)
 library(coda)
 
-setwd("~/Thesis_job/Thesis_job")
+setwd("D:/Github/Thesis_job")
 
 # ==============================================================================
 # --- 1. Definición de Datos y Cálculo de Parámetros Iniciales (Semilla) ---
