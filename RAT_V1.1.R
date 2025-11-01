@@ -1,150 +1,157 @@
-# Carga de la librería necesaria
+# --- 1. Carga de Librerías ---
+  
 library(AcceptanceSampling)
+library(tidyr) 
+library(dplyr) # Necesario para bind_rows al recolectar resultados
 
-# ----------------------------------------------------------------------
-# 1. Parámetros Globales (Fijos para todos los escenarios)
-# ----------------------------------------------------------------------
-N <- 200 # Tamaño del lote (finito)
-AQL <- 0.05 # Nivel de Calidad Aceptable
-RQL <- 0.10 # Nivel de Calidad Límite de Tolerancia
+# --- 2. Parámetros Fijos del Problema ---
 
-alpha <- 0.05 # Riesgo del Productor
-beta <- 0.10 # Riesgo del Consumidor
+N <- 200     # Tamaño del lote
+AQL <- 0.05  # Nivel de Calidad Aceptable
+RQL <- 0.10  # Nivel de Calidad Rechazable
+alpha_clasico <- 0.05
+beta_clasico <- 0.10
 
-# Parámetros de Discretización (para aproximación de la integral)
 digs <- 5
-delta_p <- 10^-digs # Incremento
-prop <- seq(0, 1, delta_p) # Vector de posibles proporciones defectuosas (p)
+delta_p <- 10^-digs 
+prop <- seq(0, 1, delta_p) # Vector de proporciones (p)
 
-# Vectores para la Curva CO (Hipergeométrica, asumimos lote finito)
-m_hyp <- N * prop # Número de defectuosos en el lote si p es 'prop'
-n_hyp <- N - m_hyp # Número de no defectuosos
+# Vectores para la Curva CO (Hipergeométrica)
+
+m_hyp <- N * prop 
+n_hyp <- N - m_hyp
 
 # Índices para la Integración (RAT)
-ind_aql <- which(prop <= AQL) # Región Aceptable [0, AQL]
-ind_rql <- which(prop >= RQL) # Región Rechazable [RQL, 1]
 
-# Densidad Naive (Uniforme no informativa)
-dens_naive <- dunif(prop, min = 0, max = 1) 
+ind_aql <- which(prop <= AQL) 
+ind_rql <- which(prop >= RQL) 
 
-# ----------------------------------------------------------------------
-# 2. Función para Ejecutar el Análisis por Escenario
-# ----------------------------------------------------------------------
+# --- 4. Plan Clásico de Referencia (Constante) ---
 
-#' Ejecuta el análisis de la búsqueda secuencial para un escenario de calidad dado.
-#' El plan óptimo busca mejorar el RAT Clásico evaluado con la densidad NAIVE (Uniforme[0,1]).
-#' La evaluación del plan óptimo se realiza con la densidad del escenario (dens_eval).
-#' @param nombre_escenario Nombre del escenario (e.g., "Excelente").
-#' @param p_min Límite inferior de la distribución Uniforme para f(p).
-#' @param p_max Límite superior de la distribución Uniforme para f(p).
-ejecutar_analisis_escenario <- function(nombre_escenario, p_min, p_max) {
+plan_clasico <- find.plan(PRP = c(AQL, 1 - alpha_clasico),
+                          CRP = c(RQL, beta_clasico),
+                          N = N, type = "hypergeom")
+
+n_clasico <- plan_clasico$n
+c_clasico <- plan_clasico$c
+
+# --- 5. Función de Optimización ---
+
+dens_eval_p <- dunif(prop, min = min_p, max = max_p)
+
+# b. Riesgos del Plan Clásico (Referencia)
   
-  cat("\n========================================================\n")
-  cat(sprintf("ESCENARIO: %s (f(p) ~ Uniforme[%.3f, %.3f])\n", nombre_escenario, p_min, p_max))
-  cat("========================================================\n")
+CO_clasic <- phyper(q = c_clasico, m = m_hyp, n = n_hyp, k = n_clasico, lower.tail = TRUE)
+
+rp_eval <- sum((1 - CO_clasic[ind_aql]) * dens_eval_p[ind_aql]) * delta_p
+rc_eval <- sum(CO_clasic[ind_rql] * dens_eval_p[ind_rql]) * delta_p
+
+# c. Métrica de Pérdida del Clásico (Distancia al origen en el espacio de riesgos)
   
-  # 2.1. Definición de la Densidad del Escenario (f(p)) - Densidad de Evaluación
-  dens_eval <- dunif(prop, min = p_min, max = p_max)
+L_eval_sqrt <- rp_eval^2 + rc_eval^2
   
-  # 2.2. Cálculo del Plan Clásico (Referencia)
-  plan_c <- find.plan(PRP = c(AQL, 1 - alpha),
-                      CRP = c(RQL, beta),
-                      N = N, type = "hypergeom")
+# d. Inicializar variables de búsqueda
   
-  n_clasico <- plan_c$n
-  c_clasico <- plan_c$c
+n_optimo <- NA
+c_optimo <- NA
   
-  # Curva CO del Plan Clásico (P_a(p))
-  CO_clasic <- phyper(q = c_clasico, m = m_hyp, k = n_clasico, n = n_hyp, lower.tail = TRUE)
-  
-  # 2.3. Cálculo de los RAT Clásicos (Baselines)
-  
-  # a) RAT Naive (RAT Clásico evaluado con la densidad Naive Uniforme[0,1])
-  rp_naive <- sum((1 - CO_clasic[ind_aql]) * dens_naive[ind_aql] * delta_p)
-  rc_naive <- sum(CO_clasic[ind_rql] * dens_naive[ind_rql] * delta_p)
-  wr_c_naive <- rp_naive + rc_naive
-  
-  # b) RAT Escenario (RAT Clásico evaluado con la densidad Real del Escenario)
-  rp_scenario <- sum((1 - CO_clasic[ind_aql]) * dens_eval[ind_aql] * delta_p)
-  rc_scenario <- sum(CO_clasic[ind_rql] * dens_eval[ind_rql] * delta_p)
-  wr_c_scenario <- rp_scenario + rc_scenario
-  
-  cat(sprintf("Plan Clásico: n=%d, c=%d\n", n_clasico, c_clasico))
-  cat(sprintf("   - RAT Naive (Baseline de Búsqueda): %f\n", wr_c_naive))
-  cat(sprintf("   - RAT Escenario (Riesgo Real): %f\n", wr_c_scenario))
-  
-  # 2.4. Búsqueda Secuencial Discreta
-  
-  # Definición del espacio de búsqueda (n <= n_clasico)
-  n_busq <- 1:n_clasico
-  c_busq <- 0:n_clasico
-  space_busq <- expand.grid(n = n_busq, c = c_busq)
-  
-  # Filtramos la grilla para asegurar la validez: n > c (como solicitaste) y n > 0
-  space_busq_filt <- space_busq[space_busq$n > space_busq$c & space_busq$n > 0, ]
-  
-  # Ordenamos (prioridad a la eficiencia: menor n, luego menor c)
-  space_busq_filt <- space_busq_filt[order(space_busq_filt$n, space_busq_filt$c), ]
-  
-  # Inicialización de la búsqueda
-  mejor_plan <- NULL
-  min_risk <- wr_c_naive # <--- BASELINE DE BÚSQUEDA AHORA ES wr_c_naive
-  found_better <- FALSE
-  
-  for (i_ in 1:nrow(space_busq_filt)) {
-    n_b <- space_busq_filt[i_, "n"]
-    c_b <- space_busq_filt[i_, "c"]
-    
-    # 1. Calcular la Curva CO para el plan (n_b, c_b)
-    CO_b <- phyper(q = c_b, m = m_hyp, k = n_b, n = n_hyp, lower.tail = TRUE)
-    
-    # 2. Calcular el RAT (WR_B) utilizando la densidad evaluada (dens_eval)
-    rp_b <- sum((1 - CO_b[ind_aql]) * dens_eval[ind_aql] * delta_p)
-    rc_b <- sum(CO_b[ind_rql] * dens_eval[ind_rql] * delta_p)
-    wr_b <- rp_b + rc_b
-    
-    # 3. Criterio de Parada: ¿El nuevo riesgo (evaluado con dens_eval) es mejor que el RAT Naive?
-    if (wr_b < min_risk) {
-      min_risk <- wr_b
-      mejor_plan <- c(n = n_b, c = c_b)
-      found_better <- TRUE # Detener al encontrar el primero mejorado
-      break # Salir del loop for, ya que Kirmeier busca el "primer"
-    }
-  }
-  
-  # 2.5. Presentación de Resultados
-  
-  if (found_better) {
-    cat("\n--- Plan Óptimo Encontrado (Búsqueda Secuencial) ---\n")
-    cat(sprintf("Plan Secuencial: n=%d, c=%d\n", mejor_plan["n"], mejor_plan["c"]))
-    cat(sprintf("RAT Secuencial (Evaluado con f(p)): %f\n", min_risk))
-    cat(sprintf("Mejora de Riesgo vs Naive Baseline: %f\n", wr_c_naive - min_risk))
-    
-    if (mejor_plan["n"] < n_clasico) {
-      cat(sprintf("¡Mejora en Eficiencia! El tamaño de muestra se redujo de %d a %d.\n", n_clasico, mejor_plan["n"]))
-    } else if (mejor_plan["n"] == n_clasico) {
-      cat("Mejora en riesgo sin reducción de tamaño de muestra.\n")
-    }
-  } else {
-    cat("\nNo se encontró un plan que mejore el RAT Naive clásico en el espacio de búsqueda restringido.\n")
-  }
+Lsqrt_minimo <- Inf # Usamos Inf para asegurar que el primer plan lo mejore
+
+# e. Búsqueda Secuencial (Mínimo n que cumple la condición)
+
+for (n_indx in 1:n_clasico) {
+for(c_indx in 0:(n_indx - 1)){
+
+n_actual <- designs_posib[[i, "n"]]
+c_actual <- designs_posib[[i, "c"]]
+
+# 1. Curva CO del plan actual
+
+CO_actual <- phyper(q = c_actual, m = m_hyp, n = n_hyp, k = n_actual, lower.tail = TRUE)
+
+# 2. Riesgos del plan actual
+
+rp_actual <- sum((1 - CO_actual[ind_aql]) * dens_eval_p[ind_aql]) * delta_p
+rc_actual <- sum(CO_actual[ind_rql] * dens_eval_p[ind_rql]) * delta_p
+
+# 3. Cálculo de la Desviación Cuadrática (Distancia al plan clásico)
+
+L_cuadratic <- (rp_actual - rp_eval)^2 + (rc_actual - rc_eval)^2
+
+# 4. Condición de Parada: El primer plan con L_cuadratic <= L_eval_sqrt
+
+if (L_cuadratic <= L_eval_sqrt) {
+
+n_optimo <- n_actual
+c_optimo <- c_actual
+
+Lsqrt_minimo <- L_cuadratic
+
+# Detenemos la búsqueda para asegurar el n mínimo (objetivo del usuario)
+
+break 
+
 }
 
-# ----------------------------------------------------------------------
-# 3. Ejecución de los 5 Casos de Proveedores (Densidades Uniformes)
-# ----------------------------------------------------------------------
+}
 
-# i) PROVEEDOR EXCELENTE: Densidad concentrada antes de AQL (0.05)
-ejecutar_analisis_escenario("I. EXCELENTE", p_min = 0.000, p_max = 0.020)
+# f. Retornar resultados en un dataframe para fácil comparación
 
-# ii) PROVEEDOR BUENO: Densidad concentrada alrededor de AQL (0.05)
-ejecutar_analisis_escenario("II. BUENO", p_min = 0.030, p_max = 0.070)
+return(data.frame(
 
-# iii) PROVEEDOR REGULAR: La densidad contiene AQL (0.05) y RQL (0.10)
-ejecutar_analisis_escenario("III. REGULAR", p_min = 0.030, p_max = 0.120)
+Escenario = escenario,
 
-# iv) PROVEEDOR MALO: Densidad concentrada alrededor de RQL (0.10)
-ejecutar_analisis_escenario("IV. MALO", p_min = 0.080, p_max = 0.150)
+P_Min = min_p,
 
-# v) PROVEEDOR MUY MALO: Densidad por encima de RQL (0.10)
-ejecutar_analisis_escenario("V. MUY MALO", p_min = 0.120, p_max = 0.200)
+P_Max = max_p,
+
+n_Clasico = n_clasico,
+
+c_Clasico = c_clasico,
+
+RP_Clasico = rp_eval,
+
+RC_Clasico = rc_eval,
+
+L_Ref_Cuadratica = L_eval_sqrt,
+
+n_Optimo = n_optimo,
+
+c_Optimo = c_optimo,
+
+L_Opt_Cuadratica = Lsqrt_minimo
+
+))
+
+
+
+
+# --- 6. Definición y Ejecución de los 5 Escenarios ---
+
+
+escenarios_params <- list(
+
+list(min_p = 0.00, max_p = 0.03, nombre = "1. Proveedor Excelente (p muy bajo)"),
+
+list(min_p = 0.00, max_p = 0.08, nombre = "2. Proveedor Bueno (hasta AQL)"),
+
+list(min_p = 0.03, max_p = 0.13, nombre = "3. Proveedor Regular (cerca de AQL/RQL)"),
+
+list(min_p = 0.08, max_p = 0.13, nombre = "4. Proveedor Malo (cercano a RQL)"),
+
+list(min_p = 0.13, max_p = 0.20, nombre = "5. Proveedor Muy Malo (en RQL)")
+
+)
+
+
+resultados <- data.frame()
+
+
+for (esc in escenarios_params) {
+
+res <- optimizar_desviacion_cuadratica(esc$min_p, esc$max_p, esc$nombre)
+
+resultados <- bind_rows(resultados, res)
+
+}
+
