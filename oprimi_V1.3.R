@@ -253,27 +253,43 @@ message("\n-----------------------------------------------------")
 message("--- 5. Generación de Gráficos ---")
 message("-----------------------------------------------------")
 
+# Vector de colores para los escenarios óptimos
+colrs <- c("deepskyblue2", "seagreen", "yellow", "orange", "red1")
+
+default_color <- "darkorchid" 
+nombres_escenarios1 <- unique(curvas_co_df$Escenario)
+# Crear el vector de colores nombrado
+colores_manuales1 <- c(default_color, colrs)
+names(colores_manuales1) <- nombres_escenarios1
+
 # Gráfico 1: Curvas CO (Parte superior)
 plot_co <- ggplot(curvas_co_df, aes(x = Proporcion, y = CO, color = Escenario, linetype = Tipo)) +
   geom_line(size = 1.1) +
   geom_vline(xintercept = AQL, linetype = "dashed", color = "gray50") +
   geom_vline(xintercept = RQL, linetype = "dashed", color = "gray50") +
-  annotate("text", x = AQL, y = 1.05, label = "AQL", size = 3, color = "gray30") +
-  annotate("text", x = RQL, y = 1.05, label = "RQL", size = 3, color = "gray30") +
+  annotate("text", x = AQL, y = 0, label = "AQL", size = 2.5, color = "gray30") +
+  annotate("text", x = RQL, y = 0, label = "RQL", size = 2.5, color = "gray30") +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
   labs(title = "Curvas CO para Planes Secuenciales Óptimos vs. Clásico",
        y = "Probabilidad de Aceptación (Pa)",
        x = "") +
+  # APLICA EL VECTOR DE COLORES MANUALES AQUÍ
+  scale_color_manual(values = colores_manuales1) + 
   theme_minimal() +
   theme(legend.position = "top", plot.title = element_text(hjust = 0.5))
 
-# Gráfico 2: Densidades a Priori (Parte inferior)
+nombres_escenarios2 <- unique(densidades_long$Escenario)
+colores_manuales2 <- colrs
+names(colores_manuales2) <- nombres_escenarios2
+
 plot_dens <- ggplot(densidades_long, aes(x = Proporcion, y = Densidad, fill = Escenario)) +
   geom_area(position = "identity", alpha = 0.6) +
   geom_vline(xintercept = AQL, linetype = "dashed", color = "gray50") +
   geom_vline(xintercept = RQL, linetype = "dashed", color = "gray50") +
   labs(y = "Densidad a Priori f(p)",
        x = "Proporción de Defectuosos (p)") +
+  # Si quieres que los colores de relleno coincidan con las líneas:
+  scale_fill_manual(values = colores_manuales2) + 
   theme_minimal() +
   theme(legend.position = "none") +
   scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25))
