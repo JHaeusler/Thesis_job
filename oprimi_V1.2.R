@@ -100,7 +100,7 @@ message(paste("Plan Clásico de Referencia: n =", n_clasic, ", c =", c_clasic))
 
 # FACTOR DE ESCALA CRÍTICO (lambda)
 
-SCALING_FACTOR_N <- (AQL / RQL) * (beta / N)
+SCALING_FACTOR_N <- (AQL / RQL) * (alpha * beta / N)
 
 
 message(paste("FACTOR LAMBDA ESCALADO (USADO):", round(SCALING_FACTOR_N, 8)))
@@ -167,7 +167,7 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
   
   # Penalización 2 (Costo Operacional)
   
-  penalizacion_clasic_costo <- alpha*SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * ((n_clasic - c_clasic)/N)
+  # penalizacion_clasic_costo <- SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * sum((CO_clasic*delta_p))
 
   
   L_clasico <- (rp_clasic + rc_clasic) + penalizacion_clasic_zi_severidad #+ penalizacion_clasic_costo
@@ -232,11 +232,11 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
       
       # Penalización 2: Costo Operacional (Nuevo término)
       
-      penalizacion_actual_costo <-  SCALING_FACTOR_N * (n_actual/ (c_actual + 1)) * ((n_actual - c_actual)/N)
+      # penalizacion_actual_costo <- SCALING_FACTOR_N * (n_actual / (c_actual + 1)) * sum((CO_actual*delta_p))
       
       
       
-      L_actual <- RAT_actual + penalizacion_actual_zi_severidad #+ penalizacion_actual_costo
+      L_actual <- RAT_actual + penalizacion_actual_zi_severidad + SCALING_FACTOR_N * (n_actual / (c_actual + 1))*(sum((CO_clasic*delta_p)) - sum((CO_actual*delta_p))) #+ penalizacion_actual_costo
       
       
       

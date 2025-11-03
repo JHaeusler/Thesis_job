@@ -14,8 +14,10 @@ for (paquete in lista_de_paquetes) {
 # semilla
 set.seed(123)
 
+cols_a <- c("chocolate", "chartreuse4", "chartreuse3", "coral3", "coral1",
+            "aquamarine4", "antiquewhite4")
 #---- Parámetros de entrada ----
-N <- 75; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.05; beta_des <- 0.10
+N <- 150; AQL <- 0.05; LTPD <- 0.10; alpha_des <- 0.05; beta_des <- 0.10
 par11 <- 0; par12 <- 0.05
 dens_1 <- parse(text = paste(paste(
   paste("dunif(p",sep=""),
@@ -132,10 +134,10 @@ col_sel <- Esc$V9
 
 x11()
 ggplot(data = Esc_resaltado, aes(x = as.factor(n.opt), y = as.factor(c.opt),
-                                 fill = V6)) +
+                                 fill = V10)) +
   geom_tile(
-    aes(color = es_riesgo_critico6), # Mapea el color del borde a la nueva variable
-    linewidth = ifelse(Esc_resaltado$es_riesgo_critico6, 0.5, 0.2) # Grosor del borde: 1.5 si TRUE, 0.5 si FALSE
+    aes(color = es_riesgo_critico10), # Mapea el color del borde a la nueva variable
+    linewidth = ifelse(Esc_resaltado$es_riesgo_critico10, 0.5, 0.2) # Grosor del borde: 1.5 si TRUE, 0.5 si FALSE
   ) +
   scale_fill_viridis_c(
     option = "cividis",
@@ -163,14 +165,19 @@ ggplot(data = Esc_resaltado, aes(x = as.factor(n.opt), y = as.factor(c.opt),
     axis.text.x = element_text(angle = 0, hjust = 1)
   )
 
-
-jujuj <- Esc$V6
+# solución mediante AcceptanceSampling (clásico)
+plan <- find.plan(PRP = c(AQL, 1 - alpha_des),
+                  CRP = c(LTPD, beta_des),
+                  N=N[1], type = "hypergeom")#; plan$n; plan$c
+# rm(plan)
+jujuj <- Esc$V9
 cumplen <- which(jujuj >= limite_inferior_resaltado & jujuj <= limite_superior_resaltado)
 n_cumplen <- Esc[cumplen, 2]; c_cumplen <- Esc[cumplen, 1] 
 
 p <- seq(0, 1, 0.01)
 # 6 <- 4
 x11()
+<<<<<<< HEAD
 layout(matrix(c(rep(1,6), rep(2,3)), nrow=3, byrow=T))
 plot(p, phyper(c_cumplen[1], N*p, N[1]*(1 - p), n_cumplen[1]), lty = 1,
      main = paste("CCO (Tipo A) de un lote de tamaño N=", N[1], "\n",
@@ -179,13 +186,25 @@ plot(p, phyper(c_cumplen[1], N*p, N[1]*(1 - p), n_cumplen[1]), lty = 1,
 for (resp in 2:(length(cumplen-1))) {
   lines(p, phyper(c_cumplen[resp], N[1]*p,N[1]*(1 - p), n_cumplen[resp]), lty = 1,
       col = "aquamarine4")
+=======
+titulo_expresion <- bquote(atop(paste("COO (Tipo A) Lote de Tamaño N=", .(N[1]),
+                                      hat(p) %~% (.(par71) ~ "," ~ .(par72)))))
+plot(prop, phyper(plan$c, N[1]*prop, N[1]*(1 - prop), plan$n), lty = 2,
+     main = titulo_expresion, type = "l", lwd = 1.5,
+     col = cols_a[1], ylab = "Pa", xlab = "p")#, xlim = c(0, 0.5))
+for (resp in 1:length(cumplen)) {
+  lines(prop, phyper(c_cumplen[resp], N[1]*prop,N[1]*(1 - prop), n_cumplen[resp]), lty = 1,
+      col = cols_a[resp+1], lwd = 1.5)
+>>>>>>> f66e1b738c6eb2d028966e7a64aee7ba83f45992
 }
-legend(x = "topright", legend = paste("n=", n_cumplen, "c=", c_cumplen), col = "aquamarine4", 
-       title = "Criterio", lty= 1, box.lty = 0, bg = NA)
+legend(x = "topright", legend = paste("n=", c(plan$n,n_cumplen), "c=", c(plan$c,c_cumplen)),
+       col = cols_a[1:(length(cumplen)+1)], 
+       title = "Plan", lty= c(2,rep(1, length(cumplen))), box.lty = 0, bg = NA)
 # abline(v=c(0.05, 0.10), lty = 3, col = c("burlywood4"))
-segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1.5, lty = 3, col = c("burlywood4"))
-segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1.5, lty = 3, col = c("burlywood4"))
-abline(v= 0, h= c(0,1), lty = 1, col = c("azure3"))
+segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1.1, lty = 3, col = c("burlywood4"))
+segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1.1, lty = 3, col = c("burlywood4"))
+segments(x0= 0, y0= 1, x1= .2, y1= 1, lty = 2, col = c("azure3"))
+abline(v= 0, h= c(0), lty = 1, col = c("azure3"))
 text(x= 0.05, y= -0.02, label= "AQL", cex = 0.6)
 text(x= 0.10, y= -0.02, label= "LTPD", cex = 0.6)
 
