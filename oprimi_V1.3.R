@@ -94,7 +94,7 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
   penalizacion_clasic_zi_severidad <- SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * zi_acceptance_risk_clasic
   
   # Penalización 2 (Costo Estructural Intrínseco) - ¡USANDO EL ÁREA NO PONDERADA!
-  penalizacion_clasic_costo <- SCALING_FACTOR_N*((n_clasic + c_clasic)/ N)*(sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p))
+  penalizacion_clasic_costo <- SCALING_FACTOR_N*(n_clasic + c_clasic)*(sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p))
   
   L_clasico <- (rp_clasic + rc_clasic) + penalizacion_clasic_zi_severidad + penalizacion_clasic_costo
   RAT_Clasico_Base <- rp_clasic + rc_clasic
@@ -130,7 +130,7 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
       penalizacion_actual_zi_severidad <- SCALING_FACTOR_N * (n_actual / (c_actual + 1)) * zi_acceptance_risk_actual
       
       # Penalización 2: Costo Estructural Intrínseco (USANDO EL ÁREA NO PONDERADA)
-      penalizacion_actual_costo <- SCALING_FACTOR_N*((n_actual + c_actual) / N) * (sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p))
+      penalizacion_actual_costo <- SCALING_FACTOR_N*(n_actual + c_actual) * (sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p))
       
       L_actual <- RAT_actual + penalizacion_actual_zi_severidad + penalizacion_actual_costo
       
@@ -176,15 +176,15 @@ message("-----------------------------------------------------")
 # Definición de los 5 escenarios (Distribuciones uniformes)
 escenarios <- list(
   # E1: Calidad Excelente (Riesgo bajo)
-  list(min_p = 0.00, max_p = 0.03, nombre = "E1 - Excelente"),
+  list(min_p = 0.00, max_p = 0.045, nombre = "E1 - Excelente"),
   # E2: Calidad Buena (Riesgo medio-bajo)
-  list(min_p = 0.03, max_p = 0.08, nombre = "E2 - Bueno"),
+  list(min_p = 0.03, max_p = 0.07, nombre = "E2 - Bueno"),
   # E3: Calidad Regular (Cubre ZI, Riesgo medio-alto)
-  list(min_p = 0.03, max_p = 0.13, nombre = "E3 - Regular"),
+  list(min_p = 0.04, max_p = 0.12, nombre = "E3 - Regular"),
   # E4: Calidad Mala (Riesgo alto)
-  list(min_p = 0.08, max_p = 0.13, nombre = "E4 - Malo"),
+  list(min_p = 0.075, max_p = 0.13, nombre = "E4 - Malo"),
   # E5: Calidad Muy Mala (Riesgo muy alto, solo rechazo)
-  list(min_p = 0.13, max_p = 0.20, nombre = "E5 - Muy Malo")
+  list(min_p = 0.15, max_p = 0.20, nombre = "E5 - Muy Malo")
 )
 
 resultados_optimizacion <- do.call(rbind, lapply(escenarios, function(e) {
@@ -238,11 +238,11 @@ curvas_co_df <- planes_visualizacion %>%
 # 5. Densidades a priori para el gráfico inferior
 densidades_df <- data.frame(
   Proporcion = prop,
-  E1 = dunif(prop, min = 0.00, max = 0.03),
-  E2 = dunif(prop, min = 0.03, max = 0.08),
-  E3 = dunif(prop, min = 0.03, max = 0.13),
-  E4 = dunif(prop, min = 0.08, max = 0.13),
-  E5 = dunif(prop, min = 0.13, max = 0.20)
+  E1 = dunif(prop, min = 0.00, max = 0.045),
+  E2 = dunif(prop, min = 0.03, max = 0.07),
+  E3 = dunif(prop, min = 0.04, max = 0.12),
+  E4 = dunif(prop, min = 0.075, max = 0.13),
+  E5 = dunif(prop, min = 0.15, max = 0.20)
 )
 densidades_long <- densidades_df %>%
   pivot_longer(cols = starts_with("E"), names_to = "Escenario", values_to = "Densidad") %>%
@@ -255,12 +255,12 @@ message("-----------------------------------------------------")
 
 # Gráfico 1: Curvas CO (Parte superior)
 plot_co <- ggplot(curvas_co_df, aes(x = Proporcion, y = CO, color = Escenario, linetype = Tipo)) +
-  geom_line(size = 1.2) +
+  geom_line(size = 1.1) +
   geom_vline(xintercept = AQL, linetype = "dashed", color = "gray50") +
   geom_vline(xintercept = RQL, linetype = "dashed", color = "gray50") +
   annotate("text", x = AQL, y = 1.05, label = "AQL", size = 3, color = "gray30") +
   annotate("text", x = RQL, y = 1.05, label = "RQL", size = 3, color = "gray30") +
-  scale_y_continuous(limits = c(0, 1.1), breaks = seq(0, 1, 0.2)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
   labs(title = "Curvas CO para Planes Secuenciales Óptimos vs. Clásico",
        y = "Probabilidad de Aceptación (Pa)",
        x = "") +
@@ -276,7 +276,7 @@ plot_dens <- ggplot(densidades_long, aes(x = Proporcion, y = Densidad, fill = Es
        x = "Proporción de Defectuosos (p)") +
   theme_minimal() +
   theme(legend.position = "none") +
-  scale_x_continuous(limits = c(0, 0.2), breaks = seq(0, 0.2, 0.02))
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25))
 
 # Combinar gráficos
 grid.arrange(plot_co, plot_dens, ncol = 1, heights = c(3, 1.5))
