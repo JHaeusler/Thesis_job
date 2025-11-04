@@ -94,6 +94,9 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
   penalizacion_clasic_zi_severidad <- SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * zi_acceptance_risk_clasic
   
   # Penalización 2 (Costo Estructural Intrínseco) - ¡USANDO EL ÁREA NO PONDERADA!
+  # total_density <- sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_zi]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p)
+  # 
+  # 
   penalizacion_clasic_costo <- SCALING_FACTOR_N*(n_clasic + c_clasic)*(sum(dens_eval_p[ind_aql]*delta_p) + sum(dens_eval_p[ind_rql]*delta_p))
   
   L_clasico <- (rp_clasic + rc_clasic) + penalizacion_clasic_zi_severidad + penalizacion_clasic_costo
