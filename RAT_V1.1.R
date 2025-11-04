@@ -94,7 +94,17 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
   message(paste("  - Riesgo de Aceptación ZI Plan Clásico:", round(zi_acceptance_risk_clasic, 6)))
   message("  - Buscando el plan que minimiza L = RAT + lambda * (n/(c+1))*P_ZI_Aceptacion_Clasica...")
   
-  L_minimo_global <- Inf
+  # e. Riesgos del plan clásico (para referencia bajo esta distribución prior)
+  rp_clasic <- sum((1 - CO_clasic[ind_aql]) * dens_eval_p[ind_aql]) * delta_p
+  rc_clasic <- sum(CO_clasic[ind_rql] * dens_eval_p[ind_rql]) * delta_p
+  
+  # ---------------------------------------------------------------------------
+  # NUEVA SECCIÓN: Cálculo de la Pérdida Total (L) del Plan Clásico (Coherencia)
+  # ---------------------------------------------------------------------------
+  penalizacion_clasic <- SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * zi_acceptance_risk_clasic
+  L_clasico <- (rp_clasic + rc_clasic) + penalizacion_clasic  
+  
+  # L_minimo_global <- L_clasico + delta_p
   n_optimo <- NA
   c_optimo <- NA
   RAT_optimo_final <- NA
@@ -116,24 +126,18 @@ optimizar_loss_combinada <- function(min_p, max_p, escenario) {
       L_actual <- RAT_actual + penalizacion
       
       # 3. Condición de Minimización ABSOLUTA
-      if (L_actual < L_minimo_global) {
+      if (L_actual < L_clasico) {
         L_minimo_global <- L_actual
         n_optimo <- n_actual
         c_optimo <- c_actual
         RAT_optimo_final <- RAT_actual
+        break
       }
+      break
     }
   }
   
-  # e. Riesgos del plan clásico (para referencia bajo esta distribución prior)
-  rp_clasic <- sum((1 - CO_clasic[ind_aql]) * dens_eval_p[ind_aql]) * delta_p
-  rc_clasic <- sum(CO_clasic[ind_rql] * dens_eval_p[ind_rql]) * delta_p
-  
-  # ---------------------------------------------------------------------------
-  # NUEVA SECCIÓN: Cálculo de la Pérdida Total (L) del Plan Clásico (Coherencia)
-  # ---------------------------------------------------------------------------
-  penalizacion_clasic <- SCALING_FACTOR_N * (n_clasic / (c_clasic + 1)) * zi_acceptance_risk_clasic
-  L_clasico <- (rp_clasic + rc_clasic) + penalizacion_clasic
+
   
   # El campo 'RAT_Clasico' ahora contendrá el L_Clasico
   return(data.frame(
