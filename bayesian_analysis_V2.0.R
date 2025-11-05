@@ -23,6 +23,17 @@ setwd("D:/Github/Thesis_job")
 # --- 1. Definición de Datos y Cálculo de Parámetros Iniciales (Semilla) ---
 # ==============================================================================
 
+
+
+### primera densidad
+
+### método de Tovar
+
+theta_exp <- sort(runif(2))
+
+
+
+
 data <- read_excel("Acceptance Sampling MIL-STD 105E for Quality Control.xlsx")
 xn <- data$Defect
 

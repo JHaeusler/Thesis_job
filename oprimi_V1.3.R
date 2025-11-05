@@ -187,7 +187,9 @@ escenarios <- list(
   # E4: Calidad Mala (Riesgo alto)
   list(min_p = 0.075, max_p = 0.13, nombre = "E4 - Malo"),
   # E5: Calidad Muy Mala (Riesgo muy alto, solo rechazo)
-  list(min_p = 0.15, max_p = 0.20, nombre = "E5 - Muy Malo")
+  list(min_p = 0.15, max_p = 0.20, nombre = "E5 - Muy Malo"),
+  # Naive
+  list(min_p = 0.00, max_p = 1.00, nombre = "E6 - Naive")
 )
 
 resultados_optimizacion <- do.call(rbind, lapply(escenarios, function(e) {
@@ -245,11 +247,12 @@ densidades_df <- data.frame(
   E2 = dunif(prop, min = 0.03, max = 0.07),
   E3 = dunif(prop, min = 0.04, max = 0.12),
   E4 = dunif(prop, min = 0.075, max = 0.13),
-  E5 = dunif(prop, min = 0.15, max = 0.20)
+  E5 = dunif(prop, min = 0.15, max = 0.20),
+  E6 = dunif(prop, min = 0.00, max = 1.00)
 )
 densidades_long <- densidades_df %>%
   pivot_longer(cols = starts_with("E"), names_to = "Escenario", values_to = "Densidad") %>%
-  mutate(Escenario = factor(Escenario, levels = c("E1", "E2", "E3", "E4", "E5")))
+  mutate(Escenario = factor(Escenario, levels = c("E1", "E2", "E3", "E4", "E5", "E6")))
 
 
 message("\n-----------------------------------------------------")
@@ -257,7 +260,7 @@ message("--- 5. Generación de Gráficos ---")
 message("-----------------------------------------------------")
 
 # Vector de colores para los escenarios óptimos
-colrs <- c("deepskyblue2", "seagreen", "yellow", "orange", "red1")
+colrs <- c("deepskyblue2", "seagreen", "yellow", "orange", "red1", "gray24")
 
 default_color <- "darkorchid" 
 nombres_escenarios1 <- unique(curvas_co_df$Escenario)
