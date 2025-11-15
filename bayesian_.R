@@ -23,3 +23,5 @@ ggplot(df_plot, aes(x = p, y = Density, group = Scenario)) +
         plot.subtitle = element_text(hjust = 0.5, size = 10),
         legend.position = "right",
         legend.title = element_text(face = "bold"))
+
+
