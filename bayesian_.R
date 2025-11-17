@@ -159,7 +159,7 @@ cat("✅ Proceso de cálculo de riesgos completado.\n\n")
 cat("--- Estructura de la Lista de Resultados ---\n")
 print(names(resultados_escenarios))
 cat("\nPrimeros 5 Planes de Muestreo (n, c) del Escenario 1 (Uniforme):\n")
-print(head(resultados_escenarios[[12]], 60))
+print(head(resultados_escenarios[[9]], 100))
 
 plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
                          CRP = c(RQL, beta),
