@@ -7,7 +7,7 @@
 
 # install.packages("pracma") # Si no lo tienes instalado
 library(pracma)
-install.packages("sjstats")
+# install.packages("sjstats")
 library(sjstats)
 library(AcceptanceSampling)
 
@@ -31,19 +31,19 @@ Pa <- function(n, c, p, N=200){
   return(Pa_val)
 }
 
-# Integrando el Riesgo del Productor: (1 - PA) * f(p)
-wr_p <- function(p, n, c, alpha_b, beta_b, N=200){
-  f.p = dbeta(p, alpha_b, beta_b)
-  prod_wr <- (1 - Pa(n, c, p, N)) * f.p
-  return(prod_wr)
-}
-
-# Integrando el Riesgo del Consumidor: PA * f(p)
-wr_c <- function(p, n, c, alpha_b, beta_b, N=200){
-  f.p = dbeta(p, alpha_b, beta_b)
-  cons_wr <- Pa(n, c, p, N) * f.p
-  return(cons_wr)
-}
+# # Integrando el Riesgo del Productor: (1 - PA) * f(p)
+# wr_p <- function(p, n, c, alpha_b, beta_b, N=200){
+#   f.p = dbeta(p, alpha_b, beta_b)
+#   prod_wr <- (1 - Pa(n, c, p, N)) * f.p
+#   return(prod_wr)
+# }
+# 
+# # Integrando el Riesgo del Consumidor: PA * f(p)
+# wr_c <- function(p, n, c, alpha_b, beta_b, N=200){
+#   f.p = dbeta(p, alpha_b, beta_b)
+#   cons_wr <- Pa(n, c, p, N) * f.p
+#   return(cons_wr)
+# }
 
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
