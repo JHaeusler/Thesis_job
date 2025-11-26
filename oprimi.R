@@ -177,7 +177,7 @@ n_cumplen <- Esc[cumplen, 2]; c_cumplen <- Esc[cumplen, 1]
 p <- seq(0, 1, 0.01)
 # 6 <- 4
 x11()
-<<<<<<< HEAD
+
 layout(matrix(c(rep(1,6), rep(2,3)), nrow=3, byrow=T))
 plot(p, phyper(c_cumplen[1], N*p, N[1]*(1 - p), n_cumplen[1]), lty = 1,
      main = paste("CCO (Tipo A) de un lote de tamaño N=", N[1], "\n",
@@ -186,7 +186,7 @@ plot(p, phyper(c_cumplen[1], N*p, N[1]*(1 - p), n_cumplen[1]), lty = 1,
 for (resp in 2:(length(cumplen-1))) {
   lines(p, phyper(c_cumplen[resp], N[1]*p,N[1]*(1 - p), n_cumplen[resp]), lty = 1,
       col = "aquamarine4")
-=======
+
 titulo_expresion <- bquote(atop(paste("COO (Tipo A) Lote de Tamaño N=", .(N[1]),
                                       hat(p) %~% (.(par71) ~ "," ~ .(par72)))))
 plot(prop, phyper(plan$c, N[1]*prop, N[1]*(1 - prop), plan$n), lty = 2,
@@ -195,7 +195,7 @@ plot(prop, phyper(plan$c, N[1]*prop, N[1]*(1 - prop), plan$n), lty = 2,
 for (resp in 1:length(cumplen)) {
   lines(prop, phyper(c_cumplen[resp], N[1]*prop,N[1]*(1 - prop), n_cumplen[resp]), lty = 1,
       col = cols_a[resp+1], lwd = 1.5)
->>>>>>> f66e1b738c6eb2d028966e7a64aee7ba83f45992
+
 }
 legend(x = "topright", legend = paste("n=", c(plan$n,n_cumplen), "c=", c(plan$c,c_cumplen)),
        col = cols_a[1:(length(cumplen)+1)], 
