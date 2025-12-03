@@ -33,17 +33,7 @@ p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumi
 # Probabilidad de Aceptación (PA) - Curva CO tipo A (Hypergeométrica)
 # Usa N (tamaño del lote) definido globalmente
 Pa <- function(n, c, p, N){
-  # d: número de defectuosos en la muestra (variable discreta)
-  # X: número de defectuosos en el lote (N*p)
-  # n: tamaño de la muestra
-  # K: tamaño de la muestra (igual a n)
-  
-  # phyper(q, m, n, k): Probabilidad acumulada hipergeométrica.
-  # q = c (máximo número de defectuosos aceptable en la muestra)
-  # m = N*p (número de defectuosos en el lote)
-  # n = N*(1-p) (número de no defectuosos en el lote)
-  # k = n (tamaño de la muestra)
-  
+
   # El paquete sjstats redondea X a un entero para la distribución hipergeométrica.
   Pa_val <- phyper(c, N * p, N * (1 - p), n)
   return(Pa_val)
