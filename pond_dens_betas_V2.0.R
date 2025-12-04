@@ -14,7 +14,7 @@ library(pracma)
 # install.packages("sjstats")
 library(sjstats)
 library(AcceptanceSampling)
-
+library(GA)
 # --- Variables Globales y Parámetros del Problema ---
 N <- 200        # Tamaño del lote
 alpha <- 0.05   # Riesgo del productor (para el plan clásico)
@@ -96,6 +96,40 @@ plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
 
 n_clasic <- plan_clasic$n
 c_clasic <- plan_clasic$c
+
+
+decode <- function(string){
+  string <- gray2binary(string)
+  n <- binary2decimal(string[1:l1])
+  c <- min(binary2decimal(string[(l1 + 1):(l1 + l2)]))
+  return(c(n,c))
+}
+
+fitness <- function(string){
+  par <- decode(string)
+  n <- par[1]
+  c <- par[2]
+  Pa1 <- phyper(c, N*AQL, N*(1 - AQL), n)
+  Pa2 <- phyper(c, N*LTPD, N*(1 - LTPD), n)
+  Loss <- (Pa1 - (1 - alpha))^2 + (Pa2 - beta)^2
+  -Loss
+}
+
+
+n_ran <- 2:N
+c_ran <- 0:(max(n_ran) - 1)
+
+b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
+b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
+
+plan_genetico <- ga(type = "binary", nBits = l1 + l2,
+                    fitness = fitness, popSize = 200,
+                    maxiter = 200, run = 100, seed = 060722)
+
+plan_ga <- decode(plan_genetico@solution)
+
+n_ga <- plan_ga[1]
+c_ga <- plan_ga[2]
 
 # --- CÁLCULO DE LÍNEA BASE BAJO IGNORANCIA (UNIFORME Beta(1, 1)) ---
 # Calculamos los riesgos individuales RP y RC para el Plan Clásico bajo la densidad Uniforme
