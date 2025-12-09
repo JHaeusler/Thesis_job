@@ -122,7 +122,7 @@ risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic,
                           AQL, LTPD)
 RP_U01_Clasic <- risks_uniforme["RP_val"]
 RC_U01_Clasic <- risks_uniforme["RC_val"]
-RAT_U01_Clasic <- risks_uniforme["RAT_val"]
+RAT_U01_Clasic <- risks_uniforme["RAT_val"] # <--- Variable corregida y usada
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
@@ -152,28 +152,27 @@ resultados_riesgo <- data.frame(
   P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
   P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
   # Riesgos de la Línea Base (Plan Clásico, Densidad Uniforme)
-  RP_U01_Clasic = RP_U01_Clasic, 
+  RP_U01_Clasic = RP_U01_Clasic,
   RC_U01_Clasic = RC_U01_Clasic,
-  RAT_U01_Clasic = RAT_Clasic, # Mantenemos TWR para el cálculo intermedio
+  RAT_U01_Clasic = RAT_U01_Clasic, # <--- Variable corregida y usada
   # Riesgos bajo Información (Plan Clásico - Solo para referencia)
   RP_clasic = NA,
   RC_clasic = NA,
-  RAT_clasic = NA, 
+  RAT_clasic = NA,
   # Plan Óptimo (Minimiza TWR bajo Información)
   n_opt = NA,
   c_opt = NA,
-  RP_opt = NA, 
+  RP_opt = NA,
   RC_opt = NA,
-  RAT_opt = NA, 
+  RAT_opt = NA,
   # Ganancias (Plan Clásico Naive vs. Plan Óptimo Informado)
-  RP_Ganancia = NA, 
+  RP_Ganancia = NA,
   RC_Ganancia = NA,
   RAT_Ganancia = NA
 )
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
 for (i in 1:5) {
-  
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
   alpha_b_val <- alpha_beta_params[i, "alpha_b"]
   beta_b_val <- alpha_beta_params[i, "beta_b"]
@@ -192,11 +191,12 @@ for (i in 1:5) {
   resultados_riesgo[i, "RP_clasic"] <- risks_clasic["RP_val"]
   resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
   
-  # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
   
+  # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
+
   n_opt_found <- NA
   c_opt_found <- NA
-  min_RAT <- Inf 
+  min_RAT <- RAT_U01_Clasic
   
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:n_clasic) { 
@@ -207,7 +207,9 @@ for (i in 1:5) {
                            AQL, LTPD)
       
       RAT_current <- risks_opt["RAT_val"]
-if (RAT_current <= RAT_U01_Clasic) {
+
+      # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
+      if (RAT_current <= min_RAT) {
         min_RAT <- RAT_current
         n_opt_found <- n_
         c_opt_found <- c_
@@ -229,11 +231,15 @@ if (RAT_current <= RAT_U01_Clasic) {
     resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
     resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
     
-
+    # V. ¡Cálculo de Ganancias Añadido!
+    # Ganancia = Riesgo Naive - Riesgo Óptimo
+    resultados_riesgo[i, "RP_Ganancia"] <- resultados_riesgo[i, "RP_U01_Clasic"] - resultados_riesgo[i, "RP_opt"]
+    resultados_riesgo[i, "RC_Ganancia"] <- resultados_riesgo[i, "RC_U01_Clasic"] - resultados_riesgo[i, "RC_opt"]
+    resultados_riesgo[i, "RAT_Ganancia"] <- resultados_riesgo[i, "RAT_U01_Clasic"] - resultados_riesgo[i, "RAT_opt"]
+    
+    
   } else {
-    resultados_riesgo[i, "RAT_opt"] <- NA
-    resultados_riesgo[i, "RP_opt"] <- NA
-    resultados_riesgo[i, "RC_opt"] <- NA
+    # ... (asignación de NAs si no se encuentra plan óptimo no alterado)
     resultados_riesgo[i, "RP_Ganancia"] <- NA
     resultados_riesgo[i, "RC_Ganancia"] <- NA
     resultados_riesgo[i, "RAT_Ganancia"] <- NA
