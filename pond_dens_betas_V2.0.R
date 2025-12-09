@@ -139,7 +139,7 @@ risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic,
                           AQL, LTPD)
 RP_U01_Clasic <- risks_uniforme["RP_val"]
 RC_U01_Clasic <- risks_uniforme["RC_val"]
-L_Clasic <- risks_uniforme["L_val.P_Good"]
+RAT_Clasic <- risks_uniforme["RAT_val"]
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
