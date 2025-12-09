@@ -40,7 +40,11 @@ Pa <- function(n, c, p, N){
 # Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
 # Error tipo I (Rechazar lote bueno): p en [0, AQL]
 wr_p <- function(p, n, c, alpha_b, beta_b, N){
+<<<<<<< HEAD
   f.p <- dbeta(p, alpha_b, beta_b) # Densidad del historico de calidad
+=======
+  f.p <- dbeta(p, alpha_b, beta_b) # Densidad a priori Beta
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   prod_wr <- (1 - Pa(n, c, p, N)) * f.p
   return(prod_wr)
 }
@@ -68,7 +72,11 @@ calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD) {
   rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
   rc_val <- integral(f = function(p) wr_c(p, n, c, alpha_b, beta_b, N), xmin = LTPD, xmax = 1, method = "Kron")
   RAT_val <- rp_val + rc_val
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   return(c(RP_val = rp_val, RC_val = rc_val, RAT_val = RAT_val))
 }
 
@@ -80,11 +88,18 @@ plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
 n_clasic <- plan_clasic$n
 c_clasic <- plan_clasic$c
 
+<<<<<<< HEAD
 
 decode <- function(string){
   string <- gray2binary(string)
   n <- binary2decimal(string[1:l1])
   c <- min(binary2decimal(string[(l1 + 1):(l1 + l2)]))
+=======
+decode <- function(string){
+  string <- gray2binary(string)
+  n <- binary2decimal(string[1:l1])
+  c <- min(n, binary2decimal(string[(l1 + 1):(l1 + l2)]))
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   return(c(n,c))
 }
 
@@ -92,6 +107,7 @@ fitness <- function(string){
   par <- decode(string)
   n <- par[1]
   c <- par[2]
+<<<<<<< HEAD
   Pa1 <- phyper(c, N*AQL, N*(1 - AQL), n)
   Pa2 <- phyper(c, N*LTPD, N*(1 - LTPD), n)
   Loss <- (Pa1 - (1 - alpha))^2 + (Pa2 - beta)^2
@@ -99,6 +115,14 @@ fitness <- function(string){
 }
 
 
+=======
+  Pa_p <- phyper(c, N*AQL, N*(1 - AQL), n)
+  Pa_c <- phyper(c, N*LTPD, N*(1 - LTPD), n)
+  Loss <- (Pa_p - (1 - alpha))^2 + (Pa_c - beta)^2
+  -Loss
+}
+
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
 n_ran <- 2:N
 c_ran <- 0:(max(n_ran) - 1)
 
@@ -122,7 +146,11 @@ risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic,
                           AQL, LTPD)
 RP_U01_Clasic <- risks_uniforme["RP_val"]
 RC_U01_Clasic <- risks_uniforme["RC_val"]
+<<<<<<< HEAD
 RAT_U01_Clasic <- risks_uniforme["RAT_val"] # <--- Variable corregida y usada
+=======
+RAT_val <- risks_uniforme["RAT_val"]
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
@@ -133,7 +161,11 @@ P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
 # 2. Obtener los 5 pares de (alpha_b, beta_b) para la distribución Beta
 alpha_beta_params <- data.frame(alpha_b = rep(NA, 5), beta_b = rep(NA, 5))
 
+<<<<<<< HEAD
 for (i in 1:5) {
+=======
+for (i in 1:5) { # i <- 1 + i
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   # find_beta encuentra los parámetros de la distribución Beta
   Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
   alpha_beta_params[i, "alpha_b"] <- Shape$shape1
@@ -146,12 +178,19 @@ resultados_riesgo <- data.frame(
   Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"),
   n_clasic = n_clasic,
   c_clasic = c_clasic,
+<<<<<<< HEAD
+=======
+  n_ga = n_ga,
+  c_ga = c_ga,  
+  
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   # Densidad Acumulada (Masa de Probabilidad) del Prior
   P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
   P_Mass_Bad_Naive = P_Mass_Bad_Naive,   # P(p > LTPD | Naive)
   P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
   P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
   # Riesgos de la Línea Base (Plan Clásico, Densidad Uniforme)
+<<<<<<< HEAD
   RP_U01_Clasic = RP_U01_Clasic,
   RC_U01_Clasic = RC_U01_Clasic,
   RAT_U01_Clasic = RAT_U01_Clasic, # <--- Variable corregida y usada
@@ -167,12 +206,34 @@ resultados_riesgo <- data.frame(
   RAT_opt = NA,
   # Ganancias (Plan Clásico Naive vs. Plan Óptimo Informado)
   RP_Ganancia = NA,
+=======
+  RP_U01_Clasic = RP_U01_Clasic, 
+  RC_U01_Clasic = RC_U01_Clasic,
+  RAT_Clasic = NA, # Mantenemos TWR para el cálculo intermedio
+  # Riesgos bajo Información (Plan Clásico - Solo para referencia)
+  RP_clasic = NA,
+  RC_clasic = NA,
+  RAT_clasic = NA, 
+  # Plan Óptimo (Minimiza TWR bajo Información)
+  n_opt = NA,
+  c_opt = NA,
+  RP_opt = NA, 
+  RC_opt = NA,
+  RAT_opt = NA, 
+  # Ganancias (Plan Clásico Naive vs. Plan Óptimo Informado)
+  RP_Ganancia = NA, 
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   RC_Ganancia = NA,
   RAT_Ganancia = NA
 )
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
+<<<<<<< HEAD
 for (i in 1:5) {
+=======
+for (i in 1:5) { # i <- 1 + i
+  
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
   alpha_b_val <- alpha_beta_params[i, "alpha_b"]
   beta_b_val <- alpha_beta_params[i, "beta_b"]
@@ -187,6 +248,7 @@ for (i in 1:5) {
                           alpha_b = alpha_b_val, beta_b = beta_b_val, 
                           AQL, LTPD)
   
+<<<<<<< HEAD
   resultados_riesgo[i, "RAT_clasic"] <- risks_clasic["RAT_clasic"]
   resultados_riesgo[i, "RP_clasic"] <- risks_clasic["RP_val"]
   resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
@@ -201,12 +263,28 @@ for (i in 1:5) {
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:n_clasic) { 
     for (c_ in 0:(n_ - 1)) {
+=======
+  resultados_riesgo[i, "RAT_clasic"] <- risks_clasic["RAT_val"]
+  resultados_riesgo[i, "RP_clasic"] <- risks_clasic["RP_val"]
+  resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
+  
+  # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
+  
+  n_opt_found <- NA
+  c_opt_found <- NA
+  
+  cumple <- FALSE
+  # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
+  for (n_ in 1:n_clasic) { # n_ <- 1 + n_
+    for (c_ in 0:(n_ - 1)) { # c_ <- 0 + 1 + c_
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
       
       risks_opt <- calc_wr(n = n_, c = c_, 
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
                            AQL, LTPD)
       
       RAT_current <- risks_opt["RAT_val"]
+<<<<<<< HEAD
 
       # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
       if (RAT_current <= min_RAT) {
@@ -215,6 +293,21 @@ for (i in 1:5) {
         c_opt_found <- c_
       }
     }
+=======
+      RP_current <- risks_opt["RP_val"]
+      RC_current <- risks_opt["RC_val"]
+    
+      # print(c(RP_current, risks_clasic["RP_val"], RC_current, risks_clasic["RC_val"]))
+  if (RP_current <= risks_clasic["RP_val"] && RC_current <= risks_clasic["RC_val"]) {
+        RAT_opt <- RAT_current
+        n_opt_found <- n_
+        c_opt_found <- c_
+        cumple <- TRUE
+        break
+      }
+    }
+    if(cumple) break
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
   }
   
   # IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
@@ -230,6 +323,7 @@ for (i in 1:5) {
     resultados_riesgo[i, "RAT_opt"] <- risks_opt_final["RAT_val"]
     resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
     resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
+<<<<<<< HEAD
     
     # V. ¡Cálculo de Ganancias Añadido!
     # Ganancia = Riesgo Naive - Riesgo Óptimo
@@ -240,6 +334,12 @@ for (i in 1:5) {
     
   } else {
     # ... (asignación de NAs si no se encuentra plan óptimo no alterado)
+=======
+} else {
+    resultados_riesgo[i, "RAT_opt"] <- NA
+    resultados_riesgo[i, "RP_opt"] <- NA
+    resultados_riesgo[i, "RC_opt"] <- NA
+>>>>>>> 1af90ffe977a5b81f268bf739beaa95ce4f790de
     resultados_riesgo[i, "RP_Ganancia"] <- NA
     resultados_riesgo[i, "RC_Ganancia"] <- NA
     resultados_riesgo[i, "RAT_Ganancia"] <- NA
