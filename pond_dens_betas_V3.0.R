@@ -237,22 +237,11 @@ for (i in 1:5) { # i <- 1 + i
         min_RAT <- RAT_current
         n_opt_found <- n_
         c_opt_found <- c_
-      }
-    }
-
-      RP_current <- risks_opt["RP_val"]
-      RC_current <- risks_opt["RC_val"]
-    
-      # print(c(RP_current, risks_clasic["RP_val"], RC_current, risks_clasic["RC_val"]))
-  if (RP_current <= risks_clasic["RP_val"] && RC_current <= risks_clasic["RC_val"]) {
-        RAT_opt <- RAT_current
-        n_opt_found <- n_
-        c_opt_found <- c_
         cumple <- TRUE
         break
       }
     }
-    if(cumple) break
+
 
   # IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
   resultados_riesgo[i, "n_opt"] <- n_opt_found
@@ -283,6 +272,8 @@ for (i in 1:5) { # i <- 1 + i
     resultados_riesgo[i, "RP_Ganancia"] <- NA
     resultados_riesgo[i, "RC_Ganancia"] <- NA
     resultados_riesgo[i, "RAT_Ganancia"] <- NA
+  }    
+  if(cumple) break
   }
 }
 
