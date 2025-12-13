@@ -40,11 +40,7 @@ Pa <- function(n, c, p, N){
 # Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
 # Error tipo I (Rechazar lote bueno): p en [0, AQL]
 wr_p <- function(p, n, c, alpha_b, beta_b, N){
-
   f.p <- dbeta(p, alpha_b, beta_b) # Densidad del historico de calidad
-
-  f.p <- dbeta(p, alpha_b, beta_b) # Densidad a priori Beta
-
   prod_wr <- (1 - Pa(n, c, p, N)) * f.p
   return(prod_wr)
 }
@@ -87,11 +83,6 @@ c_clasic <- plan_clasic$c
 decode <- function(string){
   string <- gray2binary(string)
   n <- binary2decimal(string[1:l1])
-  c <- min(binary2decimal(string[(l1 + 1):(l1 + l2)]))
-
-decode <- function(string){
-  string <- gray2binary(string)
-  n <- binary2decimal(string[1:l1])
   c <- min(n, binary2decimal(string[(l1 + 1):(l1 + l2)]))
 
   return(c(n,c))
@@ -101,13 +92,6 @@ fitness <- function(string){
   par <- decode(string)
   n <- par[1]
   c <- par[2]
-
-  Pa1 <- phyper(c, N*AQL, N*(1 - AQL), n)
-  Pa2 <- phyper(c, N*LTPD, N*(1 - LTPD), n)
-  Loss <- (Pa1 - (1 - alpha))^2 + (Pa2 - beta)^2
-  -Loss
-}
-
   Pa_p <- phyper(c, N*AQL, N*(1 - AQL), n)
   Pa_c <- phyper(c, N*LTPD, N*(1 - LTPD), n)
   Loss <- (Pa_p - (1 - alpha))^2 + (Pa_c - beta)^2
@@ -137,11 +121,7 @@ risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic,
                           AQL, LTPD)
 RP_U01_Clasic <- risks_uniforme["RP_val"]
 RC_U01_Clasic <- risks_uniforme["RC_val"]
-
-RAT_U01_Clasic <- risks_uniforme["RAT_val"] # <--- Variable corregida y usada
-
-RAT_val <- risks_uniforme["RAT_val"]
-
+RAT_U01_Clasic <- risks_uniforme["RAT_val"] 
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
@@ -241,20 +221,6 @@ for (i in 1:5) { # i <- 1 + i
   n_opt_found <- NA
   c_opt_found <- NA
   min_RAT <- RAT_U01_Clasic
-  
-  # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
-  for (n_ in 1:n_clasic) { 
-    for (c_ in 0:(n_ - 1)) {
-
-  resultados_riesgo[i, "RAT_clasic"] <- risks_clasic["RAT_val"]
-  resultados_riesgo[i, "RP_clasic"] <- risks_clasic["RP_val"]
-  resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
-  
-  # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
-  
-  n_opt_found <- NA
-  c_opt_found <- NA
-  
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:n_clasic) { # n_ <- 1 + n_
@@ -288,8 +254,6 @@ for (i in 1:5) { # i <- 1 + i
     }
     if(cumple) break
 
-  }
-  
   # IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
   resultados_riesgo[i, "n_opt"] <- n_opt_found
   resultados_riesgo[i, "c_opt"] <- c_opt_found
