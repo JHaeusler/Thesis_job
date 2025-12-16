@@ -21,7 +21,8 @@ alpha <- 0.05   # Riesgo del productor (para el plan clásico)
 beta <- 0.10    # Riesgo del consumidor (para el plan clásico)
 AQL <- 0.05     # Nivel de Calidad Aceptable
 LTPD <- 0.10    # Tolerancia de Porcentaje Defectuoso de Lote
-
+delta_p <- 1e-3
+prop <- seq(0, 1, by = delta_p)
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
 # p2 = Probabilidad de No Aceptación (o Rechazo) en el LTPD
@@ -132,12 +133,12 @@ P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
 # 2. Obtener los 5 pares de (alpha_b, beta_b) para la distribución Beta
 alpha_beta_params <- data.frame(alpha_b = rep(NA, 5), beta_b = rep(NA, 5))
 
-for (i in 1:5) { # i <- 1 + i
+for (j in 1:5) { # j <- 1 + j
 
   # find_beta encuentra los parámetros de la distribución Beta
-  Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
-  alpha_beta_params[i, "alpha_b"] <- Shape$shape1
-  alpha_beta_params[i, "beta_b"] <- Shape$shape2
+  Shape <- find_beta(x1 = AQL, p1 = p1[j], x2 = LTPD, p2 = 1 - p2[j]) 
+  alpha_beta_params[j, "alpha_b"] <- Shape$shape1
+  alpha_beta_params[j, "beta_b"] <- Shape$shape2
 }
 
 # 3. Inicializar la tabla de resultados
@@ -200,8 +201,8 @@ for (i in 1:5) { # i <- 1 + i
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
   alpha_b_val <- alpha_beta_params[i, "alpha_b"]
   beta_b_val <- alpha_beta_params[i, "beta_b"]
-  
-  # I. Calcular la masa de probabilidad para el Prior Beta específico (Informado)
+
+# I. Calcular la masa de probabilidad para el Prior Beta específico (Informado)
   prob_mass_beta <- calc_prob_mass(alpha_b = alpha_b_val, beta_b = beta_b_val, AQL, LTPD)
   resultados_riesgo[i, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
   resultados_riesgo[i, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
@@ -230,15 +231,41 @@ for (i in 1:5) { # i <- 1 + i
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
                            AQL, LTPD)
       
-      RAT_current <- risks_opt["RAT_val"]
-
-      # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
-      if (RAT_current <= min_RAT) {
-        min_RAT <- RAT_current
-        n_opt_found <- n_
-        c_opt_found <- c_
-        cumple <- TRUE
-        break
+      fp_prior <- dbeta(prop, shape1 = alpha_b_val, shape2 = beta_b_val)
+      
+      CO_clasic <- phyper(c_clasic, N*prop, N*(1-prop), n_clasic)
+      alpha_clasic <- 1 - CO_clasic
+      R_AQL_clasic <- alpha_clasic[prop<=AQL] * fp_prior[prop<=AQL]
+      R_LTPD_clasic <- CO_clasic[prop>=LTPD] * fp_prior[prop>=LTPD]
+      RA_p_clasic <- sum(R_AQL_clasic*delta_p)
+      RA_c_clasic <- sum(R_LTPD_clasic*delta_p)
+      
+      CO_opt <- phyper(c_, N*prop, N*(1-prop), n_)
+      alpha_opt <- 1 - CO_opt
+      R_AQL_opt <- alpha_opt[prop<=AQL] * fp_prior[prop<=AQL]
+      R_LTPD_opt <- CO_opt[prop>=LTPD] * fp_prior[prop>=LTPD]
+      RA_p_opt <- sum(R_AQL_opt*delta_p)
+      RA_c_opt <- sum(R_LTPD_opt*delta_p)
+      
+      # curve(dbeta(x, shape1 = alpha_b_val, shape2 = beta_b_val),
+      #       from = 0, to = 0.2, # Graficar solo hasta 0.2 para ver el pico
+      #       main = "Prior de Calidad del Proveedor (Escenario Excelente)",
+      #       xlab = "Proporción Defectuosa (p)",
+      #       ylab = "Densidad f(p)",
+      #       lwd = 2, col = "darkgreen")
+      # 
+      # abline(v = AQL, col = "blue", lty = 2)
+      # abline(v = LTPD, col = "red", lty = 2)
+      
+      # RAT_current <- risks_opt["RAT_val"]
+      # 
+      # # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
+      # if (RAT_current <= min_RAT) {
+      #   min_RAT <- RAT_current
+      #   n_opt_found <- n_
+      #   c_opt_found <- c_
+      #   cumple <- TRUE
+      #   break
       }
     }
 
