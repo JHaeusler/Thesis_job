@@ -248,7 +248,7 @@ resultados_final_comparado <- resultados_riesgo[, c(
 print(resultados_final_comparado)
 
 # =========================================================================
-# === SECCIÓN DE VISUALIZACIÓN (AJUSTADA: CO Curves AGREGADAS en un solo plot) ===
+# === SECCIÓN DE VISUALIZACIÓN  ===
 # =========================================================================
 
 proveedores_labels <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo")

@@ -241,42 +241,42 @@ for (i in 1:5) { # i <- 1 + i
         break
       }
     }
+    if(cumple) break
+  } 
 
 
-  # IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
-  resultados_riesgo[i, "n_opt"] <- n_opt_found
-  resultados_riesgo[i, "c_opt"] <- c_opt_found
+# IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
+resultados_riesgo[i, "n_opt"] <- n_opt_found
+resultados_riesgo[i, "c_opt"] <- c_opt_found
+
+# Recalcular los riesgos para el análisis final
+if (!is.na(n_opt_found)) {
+  risks_opt_final <- calc_wr(n = n_opt_found, c = c_opt_found, 
+                             alpha_b = alpha_b_val, beta_b = beta_b_val, 
+                             AQL, LTPD) 
   
-  # Recalcular los riesgos para el análisis final
-  if (!is.na(n_opt_found)) {
-    risks_opt_final <- calc_wr(n = n_opt_found, c = c_opt_found, 
-                               alpha_b = alpha_b_val, beta_b = beta_b_val, 
-                               AQL, LTPD) 
-    
-    resultados_riesgo[i, "RAT_opt"] <- risks_opt_final["RAT_val"]
-    resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
-    resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
-
-    # V. ¡Cálculo de Ganancias Añadido!
-    # Ganancia = Riesgo Naive - Riesgo Óptimo
-    resultados_riesgo[i, "RP_Ganancia"] <- resultados_riesgo[i, "RP_U01_Clasic"] - resultados_riesgo[i, "RP_opt"]
-    resultados_riesgo[i, "RC_Ganancia"] <- resultados_riesgo[i, "RC_U01_Clasic"] - resultados_riesgo[i, "RC_opt"]
-    resultados_riesgo[i, "RAT_Ganancia"] <- resultados_riesgo[i, "RAT_U01_Clasic"] - resultados_riesgo[i, "RAT_opt"]
-    
-    
-  } else {
-    resultados_riesgo[i, "RAT_opt"] <- NA
-    resultados_riesgo[i, "RP_opt"] <- NA
-    resultados_riesgo[i, "RC_opt"] <- NA
-
-    resultados_riesgo[i, "RP_Ganancia"] <- NA
-    resultados_riesgo[i, "RC_Ganancia"] <- NA
-    resultados_riesgo[i, "RAT_Ganancia"] <- NA
-  }    
-  if(cumple) break
-  }
+  resultados_riesgo[i, "RAT_opt"] <- risks_opt_final["RAT_val"]
+  resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
+  resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
+  
+  # V. ¡Cálculo de Ganancias Añadido!
+  # Ganancia = Riesgo Naive - Riesgo Óptimo
+  resultados_riesgo[i, "RP_Ganancia"] <- resultados_riesgo[i, "RP_U01_Clasic"] - resultados_riesgo[i, "RP_opt"]
+  resultados_riesgo[i, "RC_Ganancia"] <- resultados_riesgo[i, "RC_U01_Clasic"] - resultados_riesgo[i, "RC_opt"]
+  resultados_riesgo[i, "RAT_Ganancia"] <- resultados_riesgo[i, "RAT_U01_Clasic"] - resultados_riesgo[i, "RAT_opt"]
+  
+  
+} else {
+  resultados_riesgo[i, "RAT_opt"] <- NA
+  resultados_riesgo[i, "RP_opt"] <- NA
+  resultados_riesgo[i, "RC_opt"] <- NA
+  
+  resultados_riesgo[i, "RP_Ganancia"] <- NA
+  resultados_riesgo[i, "RC_Ganancia"] <- NA
+  resultados_riesgo[i, "RAT_Ganancia"] <- NA
+  
 }
-
+}
 # 5. Mostrar la tabla de resultados final
 options(digits = 6) 
 print("Tabla de Comparación de Riesgos Individuales (RP y RC): Naive vs. Bayesiano Óptimo")
