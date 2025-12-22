@@ -60,14 +60,14 @@ calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
   return(c(P_Good = P_Good, P_Bad = P_Bad))
 }
 
-
+k_p <- P_Good^(-1); k_c <- P_Bad^(-1)
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
 calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD) {
 
   # 1. Calcular RAT (RAT_val)
   rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
   rc_val <- integral(f = function(p) wr_c(p, n, c, alpha_b, beta_b, N), xmin = LTPD, xmax = 1, method = "Kron")
-  RAT_val <- rp_val + rc_val
+  RAT_val <- k_p*rp_val + k_c*rc_val
 
   return(c(RP_val = rp_val, RC_val = rc_val, RAT_val = RAT_val))
 }
