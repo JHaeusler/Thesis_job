@@ -1,7 +1,7 @@
 # Script para comparar planes de muestreo de aceptación clásicos
 # con planes óptimos basados en el Riesgo Ponderado (Enfoque Bayesiano).
 
-# Las prioris de calidad de los proveedores se definen por pares (PA en AQL, PA en LTPD)
+# Las priors de calidad de los proveedores se definen por pares (PA en AQL, PA en LTPD)
 # Excelente proveedor: PA(AQL)=0.95, PA(LTPD)=1-0.0001
 # Buen proveedor: PA(AQL)=0.75, PA(LTPD)=1-0.05
 # Regular: PA(AQL)=0.50, PA(LTPD)=1-0.10
@@ -25,8 +25,8 @@ LTPD <- 0.10    # Tolerancia de Porcentaje Defectuoso de Lote
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
 # p2 = Probabilidad de No Aceptación (o Rechazo) en el LTPD
-p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10)
-p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
+p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10) # probabilidad acumulada desde 0 hasta AQL
+p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40) # probabilidad acumulada desde ltpd hasta 1
 
 # --- Funciones de Riesgo Ponderado y Masa de Probabilidad ---
 
@@ -119,9 +119,7 @@ P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
 
 k_p_naive <- as.numeric(P_Mass_Good_Naive^(-1))
 k_c_naive <- as.numeric((1 - P_Mass_Bad_Naive)^(-1))
-# --- CÁLCULO DE LÍNEA BASE BAJO IGNORANCIA (UNIFORME Beta(1, 1)) ---
-# Calculamos los riesgos individuales RP y RC para el Plan Clásico bajo la densidad Uniforme
-# ESTE ES EL RIESGO DE REFERENCIA: Plan Clásico (Naive)
+
 risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic, 
                           alpha_b = 1, beta_b = 1, # Uniforme U(0,1)
                           AQL, LTPD, k_p = k_p_naive, k_c = k_c_naive)
@@ -181,7 +179,7 @@ resultados_riesgo <- data.frame(
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
 
-for (i in 1:5) { # i <- 1 + i
+for (i in 1:5) { # i <- 5 + i
   
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
   alpha_b_val <- alpha_beta_params[i, "alpha_b"]
@@ -205,13 +203,9 @@ for (i in 1:5) { # i <- 1 + i
   resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
   
   
-  # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
-
-  n_opt_found <- NA
-  c_opt_found <- NA
-  min_RAT <- RAT_U01_naive
-  cumple <- FALSE
-  # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
+  # --- III. Búsqueda del Plan Óptimo para el Escenario i ---
+  ensay0 <- matrix(0,(n_clasic*(n_clasic + 1))/2, 5)
+  k <- 1
   for (n_ in 1:n_clasic) { # n_ <- 1 + n_
     for (c_ in 0:(n_ - 1)) { # c_ <- 0 + 1 + c_
 
@@ -219,22 +213,20 @@ for (i in 1:5) { # i <- 1 + i
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
                            AQL, LTPD, k_p = k_p_clasic, k_c = k_c_clasic)
       
-      RP_current <- risks_opt["RP_val"]
-      RC_current <- risks_opt["RC_val"]
-      RAT_current <- risks_opt["RAT_val"]
-
-      # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
-      if (RAT_current <= min_RAT) {
-        n_opt_found <- n_
-        c_opt_found <- c_
-        cumple <- TRUE
-        break
-      }
+      ensay0[k, 1] <- n_
+      ensay0[k, 2] <- c_
+      ensay0[k, 3] <- risks_opt["RP_val"]
+      ensay0[k, 4] <- risks_opt["RC_val"]
+      ensay0[k, 5] <- risks_opt["RAT_val"]
+      
+      k <- k + 1
     }
-    if(cumple) break
   } 
 
 
+  round(ensay0[which(ensay0[,5] == min(ensay0[,5])),],4)
+  round(ensay0[which(ensay0[,5] <= RAT_U01_naive),],4)
+  
 # IV. Almacenar los resultados del plan óptimo (n_opt, c_opt)
 resultados_riesgo[i, "n_opt"] <- n_opt_found
 resultados_riesgo[i, "c_opt"] <- c_opt_found
@@ -249,8 +241,7 @@ if (!is.na(n_opt_found)) {
   resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
   resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
   
-  # V. ¡Cálculo de Ganancias Añadido!
-  # Ganancia = Riesgo Naive - Riesgo Óptimo
+  # Ganancia = Riesgo clasic - Riesgo Óptimo
   resultados_riesgo[i, "RP_Ganancia"] <- resultados_riesgo[i, "RP_clasic"] - resultados_riesgo[i, "RP_opt"]
   resultados_riesgo[i, "RC_Ganancia"] <- resultados_riesgo[i, "RC_clasic"] - resultados_riesgo[i, "RC_opt"]
   resultados_riesgo[i, "RAT_Ganancia"] <- resultados_riesgo[i, "RAT_clasic"] - resultados_riesgo[i, "RAT_opt"]
@@ -279,8 +270,8 @@ resultados_final_comparado <- resultados_riesgo[, c(
   "n_opt", "c_opt", 
   "P_Mass_Good_Naive", "P_Mass_Bad_Naive", 
   "P_Mass_Good_Beta", "P_Mass_Bad_Beta",
-  "RP_naive", "RP_opt", "RP_Ganancia",
-  "RC_naive", "RC_opt", "RC_Ganancia"
+  "RP_U01_Clasic", "RP_opt", "RP_Ganancia",
+  "RC_U01_Clasic", "RC_opt", "RC_Ganancia"
 )]
 
 print(resultados_final_comparado)
