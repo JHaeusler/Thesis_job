@@ -212,7 +212,7 @@ for (i in 1:5) { # i <- 1 + i
   min_RAT <- RAT_U01_naive
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
-  for (n_ in 1:n_clasic) { # n_ <- 1 + n_
+  for (n_ in 1:N) { # n_ <- 1 + n_
     for (c_ in 0:(n_ - 1)) { # c_ <- 0 + 1 + c_
 
       risks_opt <- calc_wr(n = n_, c = c_, 
