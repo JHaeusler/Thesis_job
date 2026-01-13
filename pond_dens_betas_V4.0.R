@@ -112,6 +112,23 @@ plan_ga <- decode(plan_genetico@solution)
 n_ga <- plan_ga[1]
 c_ga <- plan_ga[2]
 
+
+# escenarios para densidad beta global y densidad beta truncada
+
+escenarios <- data.frame(
+  Nombre = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"),
+  min_p = c(0, 0.50*AQL, 0.50*AQL, 0.80*LTPD, 1.30*LTPD),
+  max_p = c(0.90*AQL, 0.80*LTPD, 1.30*LTPD, 1.30*LTPD, 2*LTPD)
+)
+
+# densidad beta truncada
+dbeta_truncada <- function(p, a, b, min_p, max_p) {
+  area_norm <- pbeta(max_p, a, b) - pbeta(min_p, a, b)
+  dens <- dbeta(p, a, b)
+  return(ifelse(p >= min_p & p <= max_p, dens / area_norm, 0))
+}
+
+
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
 P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
@@ -290,10 +307,11 @@ print(resultados_final_comparado)
 # -------------------------------------------------------------------------
 # VISUALIZACIÓN 1 (PARTE SUPERIOR): Curvas CO Agrupadas (1 Gráfico)
 # -------------------------------------------------------------------------
-
+delta_p <- 1e-5
+p_range <- seq(0, 1, by = delta_p)
 # Calcular la curva CO para el Plan Clásico (uniforme/naive) una sola vez
 Pa_clasic_base <- Pa(n = n_clasic, c = c_clasic, p = p_range, N = N)
-
+Pa_ga_base <- Pa(n = n_ga, c = c_ga, p = p_range, N = N)
 # Inicializar el plot con la curva Clásica
 plot(p_range, Pa_clasic_base, type = "l", lty = 2, lwd = 2, col = "gray50",
      main = "Comparación de Curvas CO: Clásico (Naive) vs. Óptimo (Bayesiano) por Proveedor",
@@ -322,7 +340,7 @@ legend_lwds <- c(legend_lwds, 2)
 
 # 2. Definir paleta de colores para los 5 escenarios Óptimos
 optimal_colors <- c("darkgreen", "blue", "orange", "red", "darkred")
-
+lines(p_range, Pa_ga_base, lty = 1, lwd = 2, col = optimal_colors[i])
 # Loop para añadir las 5 curvas Óptimas
 for (i in 1:5) {
   n_opt_val <- resultados_riesgo[i, "n_opt"]
