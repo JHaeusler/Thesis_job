@@ -25,33 +25,33 @@ LTPD <- 0.10    # Tolerancia de Porcentaje Defectuoso de Lote
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
 # p2 = Probabilidad de No Aceptación (o Rechazo) en el LTPD
-p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10)
-p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
+p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10, 0.1, 0.3)
+p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40, 0.89, 0.69) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
 
 # --- Funciones de Riesgo Ponderado y Masa de Probabilidad ---
 
 # Probabilidad de Aceptación (PA) - Curva CO tipo A (Hypergeométrica)
-Pa <- function(n, c, p, N){
-  # Se utiliza phyper para la distribución hipergeométrica (muestreo sin reemplazo)
-  Pa_val <- phyper(c, N * p, N * (1 - p), n)
-  return(Pa_val)
-}
-
-# Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
-# Error tipo I (Rechazar lote bueno): p en [0, AQL]
-wr_p <- function(p, n, c, alpha_b, beta_b, N){
-  f.p <- dbeta(p, alpha_b, beta_b) # Densidad del historico de calidad
-  prod_wr <- (1 - Pa(n, c, p, N)) * f.p
-  return(prod_wr)
-}
-
-# Integrando el Riesgo del Consumidor (RC): PA * f(p)
-# Error tipo II (Aceptar lote malo): p en [LTPD, 1]
-wr_c <- function(p, n, c, alpha_b, beta_b, N){
-  f.p <- dbeta(p, alpha_b, beta_b) # Densidad a priori Beta
-  cons_wr <- Pa(n, c, p, N) * f.p
-  return(cons_wr)
-}
+# Pa <- function(n, c, p, N){
+#   # Se utiliza phyper para la distribución hipergeométrica (muestreo sin reemplazo)
+#   Pa_val <- phyper(c, N * p, N * (1 - p), n)
+#   return(Pa_val)
+# }
+# 
+# # Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
+# # Error tipo I (Rechazar lote bueno): p en [0, AQL]
+# wr_p <- function(p, n, c, alpha_b, beta_b, N){
+#   f.p <- dbeta(p, alpha_b, beta_b) # Densidad del historico de calidad
+#   prod_wr <- (1 - Pa(n, c, p, N)) * f.p
+#   return(prod_wr)
+# }
+# 
+# # Integrando el Riesgo del Consumidor (RC): PA * f(p)
+# # Error tipo II (Aceptar lote malo): p en [LTPD, 1]
+# wr_c <- function(p, n, c, alpha_b, beta_b, N){
+#   f.p <- dbeta(p, alpha_b, beta_b) # Densidad a priori Beta
+#   cons_wr <- Pa(n, c, p, N) * f.p
+#   return(cons_wr)
+# }
 
 # Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
 calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
@@ -60,13 +60,16 @@ calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
   return(c(P_Good = P_Good, P_Bad = P_Bad))
 }
 
+# delta_p <- 1e-5
+# prop <- seq(0,1, by = delta_p)
+
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
 calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
-
   # 1. Calcular RAT (RAT_val)
-  rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
-  rc_val <- integral(f = function(p) wr_c(p, n, c, alpha_b, beta_b, N), xmin = LTPD, xmax = 1, method = "Kron")
-  RAT_val <- k_p*rp_val + k_c*rc_val
+  #rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
+  rp_val <- k_p*(1-phyper(c, N * AQL, N * (1 - AQL), n))
+  rc_val <- k_c*phyper(c, N * LTPD, N * (1 - LTPD), n)
+  RAT_val <- rp_val + rc_val
 
   return(c(RP_val = rp_val, RC_val = rc_val, RAT_val = RAT_val))
 }
@@ -79,38 +82,38 @@ plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
 n_clasic <- plan_clasic$n
 c_clasic <- plan_clasic$c
 
-decode <- function(string){
-  string <- gray2binary(string)
-  n <- binary2decimal(string[1:l1])
-  c <- min(n, binary2decimal(string[(l1 + 1):(l1 + l2)]))
-
-  return(c(n,c))
-}
-
-fitness <- function(string){
-  par <- decode(string)
-  n <- par[1]
-  c <- par[2]
-  Pa_p <- phyper(c, N*AQL, N*(1 - AQL), n)
-  Pa_c <- phyper(c, N*LTPD, N*(1 - LTPD), n)
-  Loss <- (Pa_p - (1 - alpha))^2 + (Pa_c - beta)^2
-  -Loss
-}
-
-n_ran <- 2:N
-c_ran <- 0:(max(n_ran) - 1)
-
-b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
-b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
-
-plan_genetico <- ga(type = "binary", nBits = l1 + l2,
-                    fitness = fitness, popSize = 200,
-                    maxiter = 200, run = 100, seed = 060722)
-
-plan_ga <- decode(plan_genetico@solution)
-
-n_ga <- plan_ga[1]
-c_ga <- plan_ga[2]
+# decode <- function(string){
+#   string <- gray2binary(string)
+#   n <- binary2decimal(string[1:l1])
+#   c <- min(n, binary2decimal(string[(l1 + 1):(l1 + l2)]))
+# 
+#   return(c(n,c))
+# }
+# 
+# fitness <- function(string){
+#   par <- decode(string)
+#   n <- par[1]
+#   c <- par[2]
+#   Pa_p <- phyper(c, N*AQL, N*(1 - AQL), n)
+#   Pa_c <- phyper(c, N*LTPD, N*(1 - LTPD), n)
+#   Loss <- (Pa_p - (1 - alpha))^2 + (Pa_c - beta)^2
+#   -Loss
+# }
+# 
+# n_ran <- 2:N
+# c_ran <- 0:(max(n_ran) - 1)
+# 
+# b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
+# b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
+# 
+# plan_genetico <- ga(type = "binary", nBits = l1 + l2,
+#                     fitness = fitness, popSize = 200,
+#                     maxiter = 200, run = 100, seed = 060722)
+# 
+# plan_ga <- decode(plan_genetico@solution)
+# 
+# n_ga <- plan_ga[1]
+# c_ga <- plan_ga[2]
 
 
 # # escenarios para densidad beta global y densidad beta truncada
@@ -133,25 +136,25 @@ c_ga <- plan_ga[2]
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
 P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
 P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
-
-k_p_naive <- as.numeric(P_Mass_Good_Naive^(-1))
-k_c_naive <- as.numeric((1 - P_Mass_Bad_Naive)^(-1))
+# 
+# k_p_naive <- as.numeric(P_Mass_Good_Naive)
+# k_c_naive <- as.numeric((1 - P_Mass_Bad_Naive))
 # --- CÁLCULO DE LÍNEA BASE BAJO IGNORANCIA (UNIFORME Beta(1, 1)) ---
 # Calculamos los riesgos individuales RP y RC para el Plan Clásico bajo la densidad Uniforme
 # ESTE ES EL RIESGO DE REFERENCIA: Plan Clásico (Naive)
-risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic, 
-                          alpha_b = 1, beta_b = 1, # Uniforme U(0,1)
-                          AQL, LTPD, k_p = k_p_naive, k_c = k_c_naive)
-RP_U01_naive <- risks_uniforme["RP_val"]
-RC_U01_naive <- risks_uniforme["RC_val"]
-RAT_U01_naive <- risks_uniforme["RAT_val"] 
+# risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic, 
+#                           alpha_b = 1, beta_b = 1, # Uniforme U(0,1)
+#                           AQL, LTPD, k_p = k_p_naive, k_c = k_c_naive)
+# RP_U01_naive <- risks_uniforme["RP_val"]
+# RC_U01_naive <- risks_uniforme["RC_val"]
+# RAT_U01_naive <- risks_uniforme["RAT_val"] 
 
 # -------------------------------------------------------------------
 
 # 2. Obtener los 5 pares de (alpha_b, beta_b) para la distribución Beta
-alpha_beta_params <- data.frame(alpha_b = rep(NA, 5), beta_b = rep(NA, 5))
+alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, length(p1)))
 
-for (i in 1:5) { # i <- 1 + i
+for (i in 1:length(p1)) { # i <- 1 + i
 
   # find_beta encuentra los parámetros de la distribución Beta
   Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
@@ -166,8 +169,8 @@ resultados_riesgo <- data.frame(
   n_clasic = n_clasic,
   c_clasic = c_clasic,
 
-  n_ga = n_ga,
-  c_ga = c_ga,  
+  # n_ga = n_ga,
+  # c_ga = c_ga,  
   
   # Densidad Acumulada (Masa de Probabilidad) del Prior
   P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
@@ -176,9 +179,9 @@ resultados_riesgo <- data.frame(
   P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
   # Riesgos de la Línea Base (Plan Clásico, Densidad Uniforme)
 
-  RP_naive = RP_U01_naive,
-  RC_naive = RC_U01_naive,
-  RAT_naive = RAT_U01_naive,
+  # RP_naive = RP_U01_naive,
+  # RC_naive = RC_U01_naive,
+  # RAT_naive = RAT_U01_naive,
   # Riesgos bajo Información (Plan Clásico - Solo para referencia)
   RP_clasic = NA,
   RC_clasic = NA,
@@ -198,7 +201,7 @@ resultados_riesgo <- data.frame(
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
 
-for (i in 1:5) { # i <- 1 + i
+for (i in 1:length(p1)) { # i <- 1 + i
   
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
   alpha_b_val <- alpha_beta_params[i, "alpha_b"]
@@ -209,8 +212,8 @@ for (i in 1:5) { # i <- 1 + i
   resultados_riesgo[i, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
   resultados_riesgo[i, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
   
-  k_p_clasic <- as.numeric(prob_mass_beta["P_Good"]^(-1))
-  k_c_clasic <- as.numeric((1 - prob_mass_beta["P_Bad"])^(-1))
+  k_p_clasic <- as.numeric(prob_mass_beta["P_Good"])
+  k_c_clasic <- as.numeric((prob_mass_beta["P_Bad"]))
   
   # II. Calcular los riesgos para el PLAN CLÁSICO (Bajo el Prior Beta ESPECÍFICO)
   risks_clasic <- calc_wr(n = n_clasic, c = c_clasic, 
@@ -226,7 +229,7 @@ for (i in 1:5) { # i <- 1 + i
 
   n_opt_found <- NA
   c_opt_found <- NA
-  min_RAT <- risks_clasic["RAT_val"]
+  min_RAT <- k_p_clasic * alpha + k_c_clasic * beta
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:N) { # n_ <- 1 + n_
