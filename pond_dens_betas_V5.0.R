@@ -17,11 +17,13 @@ library(AcceptanceSampling)
 library(GA)
 
 # --- Variables Globales y Parámetros del Problema ---
-N <- 200        # Tamaño del lote
-alpha <- 0.01   # Riesgo del productor (para el plan clásico)
-beta <- 0.20    # Riesgo del consumidor (para el plan clásico)
-AQL <- 0.05     # Nivel de Calidad Aceptable
-LTPD <- 0.10    # Tolerancia de Porcentaje Defectuoso de Lote
+N <- c(200, 1000)        # Tamaño del lote
+alpha <- c(0.01, 005)   # Riesgo del productor (para el plan clásico)
+beta <- c(0.05, 0.10, 0.20)    # Riesgo del consumidor (para el plan clásico)
+AQL <- c(0.01, 0.02, 0.05)     # Nivel de Calidad Aceptable
+LTPD <- c(0.08, 0.10, 0.15, 0.20)    # Tolerancia de Porcentaje Defectuoso de Lote
+
+Esce <- expand.grid(N = N, alpha = alpha, beta = beta, AQL = AQL, LTPD = LTPD)
 
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
@@ -75,10 +77,14 @@ calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
   return(c(WRP_val = wrp_val, WRC_val = wrc_val, WRT_val = wrt_val))
 }
 
+
+for (esce in 1:dim(Esce)[1]) { # esce <- 1 + esce
+  
+
 # 1. Determinar el Plan Clásico (basado en alpha y beta fijos)
-plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
-                         CRP = c(LTPD, beta),
-                         N = N, type = "hypergeom")
+plan_clasic <- find.plan(PRP = c(Esce[esce, 4], 1 - Esce[esce, 2]),
+                         CRP = c(Esce[esce, 5], Esce[esce, 3]),
+                         N = Esce[esce, 1], type = "hypergeom")
 
 n_clasic <- plan_clasic$n
 c_clasic <- plan_clasic$c
@@ -134,9 +140,9 @@ c_clasic <- plan_clasic$c
 # 
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
-prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
-P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
-P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
+# prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, Esce[esce, 4], Esce[esce, 5])
+# P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
+# P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
 # 
 # k_p_naive <- as.numeric(P_Mass_Good_Naive)
 # k_c_naive <- as.numeric((1 - P_Mass_Bad_Naive))
@@ -158,7 +164,7 @@ alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, 
 for (i in 1:length(p1)) { # i <- 1 + i
 
   # find_beta encuentra los parámetros de la distribución Beta
-  Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
+  Shape <- find_beta(x1 = Esce[esce, 4], p1 = p1[i], x2 = Esce[esce, 5], p2 = 1 - p2[i]) 
   alpha_beta_params[i, "alpha_b"] <- Shape$shape1
   alpha_beta_params[i, "beta_b"] <- Shape$shape2
 }
@@ -184,34 +190,34 @@ resultados_riesgo <- data.frame(
   # RC_naive = RC_U01_naive,
   # RAT_naive = RAT_U01_naive,
   # Riesgos bajo Información (Plan Clásico - Solo para referencia)
-  RP_clasic = NA,
-  RC_clasic = NA,
-  RAT_clasic = NA,
+  WRP_clasic = NA,
+  WRC_clasic = NA,
+  WRT_clasic = NA,
   # Plan Óptimo (Minimiza TWR bajo Información)
   n_opt = NA,
   c_opt = NA,
-  RP_opt = NA,
-  RC_opt = NA,
-  RAT_opt = NA,
+  WRP_opt = NA,
+  WRC_opt = NA,
+  WRT_opt = NA,
 
   # Ganancias (Plan Clásico Naive vs. Plan Óptimo Informado)
-  RP_Ganancia = NA, 
-  RC_Ganancia = NA,
-  RAT_Ganancia = NA
+  WRP_Ganancia = NA, 
+  WRC_Ganancia = NA,
+  WRT_Ganancia = NA
 )
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
 
-for (i in 1:length(p1)) { # i <- 1 + i
+for (j in 1:length(p1)) { # j <- 1 + j
   
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
-  alpha_b_val <- alpha_beta_params[i, "alpha_b"]
-  beta_b_val <- alpha_beta_params[i, "beta_b"]
+  alpha_b_val <- alpha_beta_params[j, "alpha_b"]
+  beta_b_val <- alpha_beta_params[j, "beta_b"]
   
   # I. Calcular la masa de probabilidad para el Prior Beta específico (Informado)
-  prob_mass_beta <- calc_prob_mass(alpha_b = alpha_b_val, beta_b = beta_b_val, AQL, LTPD)
-  resultados_riesgo[i, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
-  resultados_riesgo[i, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
+  prob_mass_beta <- calc_prob_mass(alpha_b = alpha_b_val, beta_b = beta_b_val, Esce[esce, 4], Esce[esce, 5])
+  resultados_riesgo[j, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
+  resultados_riesgo[j, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
   
   k_p_ <- as.numeric(prob_mass_beta["P_Good"])
   k_c_ <- as.numeric((prob_mass_beta["P_Bad"]))
@@ -264,7 +270,7 @@ resultados_riesgo[i, "c_opt"] <- c_opt_found
 if (!is.na(n_opt_found)) {
   risks_opt_final <- calc_wr(n = n_opt_found, c = c_opt_found, 
                              alpha_b = alpha_b_val, beta_b = beta_b_val, 
-                             AQL, LTPD, k_p = k_p_, k_c = k_c_) 
+                             Esce[esce, 4], Esce[esce, 5], k_p = k_p_, k_c = k_c_) 
   
   resultados_riesgo[i, "WRT_opt"] <- risks_opt_final["WRT_val"]
   resultados_riesgo[i, "WRP_opt"] <- risks_opt_final["WRP_val"]
@@ -286,6 +292,7 @@ if (!is.na(n_opt_found)) {
   resultados_riesgo[i, "WRC_Ganancia"] <- NA
   resultados_riesgo[i, "WRT_Ganancia"] <- NA
   
+}
 }
 }
 # 5. Mostrar la tabla de resultados final
