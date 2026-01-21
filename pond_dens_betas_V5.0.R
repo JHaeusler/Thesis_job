@@ -15,10 +15,11 @@ library(pracma)
 library(sjstats)
 library(AcceptanceSampling)
 library(GA)
+
 # --- Variables Globales y Parámetros del Problema ---
 N <- 200        # Tamaño del lote
-alpha <- 0.05   # Riesgo del productor (para el plan clásico)
-beta <- 0.10    # Riesgo del consumidor (para el plan clásico)
+alpha <- 0.01   # Riesgo del productor (para el plan clásico)
+beta <- 0.20    # Riesgo del consumidor (para el plan clásico)
 AQL <- 0.05     # Nivel de Calidad Aceptable
 LTPD <- 0.10    # Tolerancia de Porcentaje Defectuoso de Lote
 
@@ -67,11 +68,11 @@ calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
 calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
   # 1. Calcular RAT (RAT_val)
   #rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
-  rp_val <- k_p*(1-phyper(c, N * AQL, N * (1 - AQL), n))
-  rc_val <- k_c*phyper(c, N * LTPD, N * (1 - LTPD), n)
-  RAT_val <- rp_val + rc_val
+  wrp_val <- k_p*(1-phyper(c, N * AQL, N * (1 - AQL), n))
+  wrc_val <- k_c*phyper(c, N * LTPD, N * (1 - LTPD), n)
+  wrt_val <- wrp_val + wrc_val
 
-  return(c(RP_val = rp_val, RC_val = rc_val, RAT_val = RAT_val))
+  return(c(WRP_val = wrp_val, WRC_val = wrc_val, WRT_val = wrt_val))
 }
 
 # 1. Determinar el Plan Clásico (basado en alpha y beta fijos)
@@ -164,8 +165,8 @@ for (i in 1:length(p1)) { # i <- 1 + i
 
 # 3. Inicializar la tabla de resultados
 resultados_riesgo <- data.frame(
-  Escenario = 1:5,
-  Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"),
+  Escenario = 1:length(p1),
+  Proveedor = c(c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"), paste("otro", 1:(abs(5-length(p1))))),
   n_clasic = n_clasic,
   c_clasic = c_clasic,
 
@@ -173,8 +174,8 @@ resultados_riesgo <- data.frame(
   # c_ga = c_ga,  
   
   # Densidad Acumulada (Masa de Probabilidad) del Prior
-  P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
-  P_Mass_Bad_Naive = P_Mass_Bad_Naive,   # P(p > LTPD | Naive)
+  # P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
+  # P_Mass_Bad_Naive = P_Mass_Bad_Naive,   # P(p > LTPD | Naive)
   P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
   P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
   # Riesgos de la Línea Base (Plan Clásico, Densidad Uniforme)
@@ -212,24 +213,24 @@ for (i in 1:length(p1)) { # i <- 1 + i
   resultados_riesgo[i, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
   resultados_riesgo[i, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
   
-  k_p_clasic <- as.numeric(prob_mass_beta["P_Good"])
-  k_c_clasic <- as.numeric((prob_mass_beta["P_Bad"]))
+  k_p_ <- as.numeric(prob_mass_beta["P_Good"])
+  k_c_ <- as.numeric((prob_mass_beta["P_Bad"]))
   
   # II. Calcular los riesgos para el PLAN CLÁSICO (Bajo el Prior Beta ESPECÍFICO)
   risks_clasic <- calc_wr(n = n_clasic, c = c_clasic, 
                           alpha_b = alpha_b_val, beta_b = beta_b_val, 
-                          AQL, LTPD, k_p = k_p_clasic, k_c = k_c_clasic)
+                          AQL, LTPD, k_p = k_p_, k_c = k_c_)
   
-  resultados_riesgo[i, "RAT_clasic"] <- risks_clasic["RAT_val"]
-  resultados_riesgo[i, "RP_clasic"] <- risks_clasic["RP_val"]
-  resultados_riesgo[i, "RC_clasic"] <- risks_clasic["RC_val"]
+  resultados_riesgo[i, "WRT_clasic"] <- risks_clasic["WRT_val"]
+  resultados_riesgo[i, "WRP_clasic"] <- risks_clasic["WRP_val"]
+  resultados_riesgo[i, "WRC_clasic"] <- risks_clasic["WRC_val"]
   
   
   # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
 
   n_opt_found <- NA
   c_opt_found <- NA
-  min_RAT <- k_p_clasic * alpha + k_c_clasic * beta
+  des_WRT <- k_p_ * alpha + k_c_ * beta
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:N) { # n_ <- 1 + n_
@@ -237,14 +238,14 @@ for (i in 1:length(p1)) { # i <- 1 + i
 
       risks_opt <- calc_wr(n = n_, c = c_, 
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
-                           AQL, LTPD, k_p = k_p_clasic, k_c = k_c_clasic)
+                           AQL, LTPD, k_p = k_p_, k_c = k_c_)
       
-      RP_current <- risks_opt["RP_val"]
-      RC_current <- risks_opt["RC_val"]
-      RAT_current <- risks_opt["RAT_val"]
+      WRP_current <- risks_opt["WRP_val"]
+      WRC_current <- risks_opt["WRC_val"]
+      WRT_current <- risks_opt["WRT_val"]
 
       # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
-      if (RAT_current <= min_RAT) {
+      if (WRT_current <= des_WRT) {
         n_opt_found <- n_
         c_opt_found <- c_
         cumple <- TRUE
@@ -263,27 +264,27 @@ resultados_riesgo[i, "c_opt"] <- c_opt_found
 if (!is.na(n_opt_found)) {
   risks_opt_final <- calc_wr(n = n_opt_found, c = c_opt_found, 
                              alpha_b = alpha_b_val, beta_b = beta_b_val, 
-                             AQL, LTPD, k_p = k_p_clasic, k_c = k_c_clasic) 
+                             AQL, LTPD, k_p = k_p_, k_c = k_c_) 
   
-  resultados_riesgo[i, "RAT_opt"] <- risks_opt_final["RAT_val"]
-  resultados_riesgo[i, "RP_opt"] <- risks_opt_final["RP_val"]
-  resultados_riesgo[i, "RC_opt"] <- risks_opt_final["RC_val"]
+  resultados_riesgo[i, "WRT_opt"] <- risks_opt_final["WRT_val"]
+  resultados_riesgo[i, "WRP_opt"] <- risks_opt_final["WRP_val"]
+  resultados_riesgo[i, "WRC_opt"] <- risks_opt_final["WRC_val"]
   
   # V. ¡Cálculo de Ganancias Añadido!
   # Ganancia = Riesgo Naive - Riesgo Óptimo
-  resultados_riesgo[i, "RP_Ganancia"] <- resultados_riesgo[i, "RP_clasic"] - resultados_riesgo[i, "RP_opt"]
-  resultados_riesgo[i, "RC_Ganancia"] <- resultados_riesgo[i, "RC_clasic"] - resultados_riesgo[i, "RC_opt"]
-  resultados_riesgo[i, "RAT_Ganancia"] <- resultados_riesgo[i, "RAT_clasic"] - resultados_riesgo[i, "RAT_opt"]
+  resultados_riesgo[i, "WRP_Ganancia"] <- resultados_riesgo[i, "WRP_clasic"] - resultados_riesgo[i, "WRP_opt"]
+  resultados_riesgo[i, "WRC_Ganancia"] <- resultados_riesgo[i, "WRC_clasic"] - resultados_riesgo[i, "WRC_opt"]
+  resultados_riesgo[i, "WRT_Ganancia"] <- resultados_riesgo[i, "WRT_clasic"] - resultados_riesgo[i, "WRT_opt"]
   
   
 } else {
-  resultados_riesgo[i, "RAT_opt"] <- NA
-  resultados_riesgo[i, "RP_opt"] <- NA
-  resultados_riesgo[i, "RC_opt"] <- NA
+  resultados_riesgo[i, "WRT_opt"] <- NA
+  resultados_riesgo[i, "WRP_opt"] <- NA
+  resultados_riesgo[i, "WRC_opt"] <- NA
   
-  resultados_riesgo[i, "RP_Ganancia"] <- NA
-  resultados_riesgo[i, "RC_Ganancia"] <- NA
-  resultados_riesgo[i, "RAT_Ganancia"] <- NA
+  resultados_riesgo[i, "WRP_Ganancia"] <- NA
+  resultados_riesgo[i, "WRC_Ganancia"] <- NA
+  resultados_riesgo[i, "WRT_Ganancia"] <- NA
   
 }
 }
@@ -305,110 +306,110 @@ resultados_final_comparado <- resultados_riesgo[, c(
 
 print(resultados_final_comparado)
 
-
-
-# -------------------------------------------------------------------------
-# VISUALIZACIÓN 1 (PARTE SUPERIOR): Curvas CO Agrupadas (1 Gráfico)
-# -------------------------------------------------------------------------
-delta_p <- 1e-5
-p_range <- seq(0, 1, by = delta_p)
-# Calcular la curva CO para el Plan Clásico (uniforme/naive) una sola vez
-Pa_clasic_base <- Pa(n = n_clasic, c = c_clasic, p = p_range, N = N)
-Pa_ga_base <- Pa(n = n_ga, c = c_ga, p = p_range, N = N)
-# Inicializar el plot con la curva Clásica
-plot(p_range, Pa_clasic_base, type = "l", lty = 2, lwd = 2, col = "gray50",
-     main = "Comparación de Curvas CO: Clásico (Naive) vs. Óptimo (Bayesiano) por Proveedor",
-     xlab = "Proporción Defectuosa (p)",
-     ylab = "Probabilidad de Aceptación (PA)",
-     ylim = c(0, 1),
-     cex.main = 1, cex.lab = 1)
-
-# Añadir líneas de referencia AQL y LTPD
-segments(AQL, 1 - alpha, AQL, -0.1, lty = 3, col = "black")
-segments(LTPD, beta, LTPD, -0.1, lty = 3, col = "black")
-text(AQL, 0.05, "AQL", cex = 0.8, pos = 4)
-text(LTPD, 0.05, "LTPD", cex = 0.8, pos = 4)
-
-
-legend_labels <- c()
-legend_colors <- c()
-legend_ltys <- c()
-legend_lwds <- c()
-
-# 1. Agregar el Plan Clásico a la leyenda
-legend_labels <- c(legend_labels, paste0("Clásico Naive (", n_clasic, ", ", c_clasic, ")"))
-legend_colors <- c(legend_colors, "gray50")
-legend_ltys <- c(legend_ltys, 2)
-legend_lwds <- c(legend_lwds, 2)
-
-# 2. Definir paleta de colores para los 5 escenarios Óptimos
-optimal_colors <- c("darkgreen", "blue", "orange", "red", "darkred")
-lines(p_range, Pa_ga_base, lty = 1, lwd = 2, col = optimal_colors[i])
-# Loop para añadir las 5 curvas Óptimas
-for (i in 1:5) {
-  n_opt_val <- resultados_riesgo[i, "n_opt"]
-  c_opt_val <- resultados_riesgo[i, "c_opt"]
-  
-  Pa_opt <- Pa(n = n_opt_val, c = c_opt_val, p = p_range, N = N)
-  
-  # Dibujar Curva CO Óptima
-  lines(p_range, Pa_opt, lty = 1, lwd = 2, col = optimal_colors[i])
-  
-  # Agregar Plan Óptimo a la leyenda
-  legend_labels <- c(legend_labels, paste0("Óptimo (", proveedores_labels[i], ": ", n_opt_val, ", ", c_opt_val, ")"))
-  legend_colors <- c(legend_colors, optimal_colors[i])
-  legend_ltys <- c(legend_ltys, 1)
-  legend_lwds <- c(legend_lwds, 2)
-}
-
-# Mostrar Leyenda Completa
-legend("topright",
-       legend = legend_labels,
-       col = legend_colors,
-       lty = legend_ltys,
-       lwd = legend_lwds,
-       cex = 0.8,
-       title = "Planes de Muestreo")
-
-
-# -------------------------------------------------------------------------
-# VISUALIZACIÓN 2 (PARTE INFERIOR): Densidades a Priori Agrupadas (1 Gráfico Grande)
-# -------------------------------------------------------------------------
-
-# Cambiar márgenes para el gráfico inferior
-par(mar = c(5, 4, 3, 2) + 0.1)
-
-# Calcular el límite Y máximo
-max_y_limit <- max(dbeta(p_range, alpha_beta_params$alpha_b, alpha_beta_params$beta_b)) * 1.1
-
-plot(p_range, dbeta(p_range, 1, 1), type = "l", col = "gray50", lty = 2, lwd = 2,
-     main = "Distribuciones a Priori de la Calidad del Proveedor (p)",
-     xlab = "Proporción Defectuosa (p)",
-     ylab = "Densidad de Probabilidad f(p)",
-     ylim = c(0, max_y_limit))
-
-colores <- c("darkgreen", "blue", "orange", "red", "darkred")
-for (i in 1:5) {
-  lines(p_range, dbeta(p_range, alpha_beta_params[i, "alpha_b"], alpha_beta_params[i, "beta_b"]),
-        col = colores[i], lwd = 2)
-}
-
-# Líneas de referencia para AQL y LTPD
-abline(v = AQL, col = "black", lty = 3)
-text(AQL, max_y_limit * 0.95,
-     "AQL", cex = 0.8, pos = 4)
-abline(v = LTPD, col = "black", lty = 3)
-text(LTPD, max_y_limit * 0.95,
-     "LTPD", cex = 0.8, pos = 4)
-
+# 
+# 
+# # -------------------------------------------------------------------------
+# # VISUALIZACIÓN 1 (PARTE SUPERIOR): Curvas CO Agrupadas (1 Gráfico)
+# # -------------------------------------------------------------------------
+# delta_p <- 1e-5
+# p_range <- seq(0, 1, by = delta_p)
+# # Calcular la curva CO para el Plan Clásico (uniforme/naive) una sola vez
+# Pa_clasic_base <- Pa(n = n_clasic, c = c_clasic, p = p_range, N = N)
+# Pa_ga_base <- Pa(n = n_ga, c = c_ga, p = p_range, N = N)
+# # Inicializar el plot con la curva Clásica
+# plot(p_range, Pa_clasic_base, type = "l", lty = 2, lwd = 2, col = "gray50",
+#      main = "Comparación de Curvas CO: Clásico (Naive) vs. Óptimo (Bayesiano) por Proveedor",
+#      xlab = "Proporción Defectuosa (p)",
+#      ylab = "Probabilidad de Aceptación (PA)",
+#      ylim = c(0, 1),
+#      cex.main = 1, cex.lab = 1)
+# 
+# # Añadir líneas de referencia AQL y LTPD
+# segments(AQL, 1 - alpha, AQL, -0.1, lty = 3, col = "black")
+# segments(LTPD, beta, LTPD, -0.1, lty = 3, col = "black")
+# text(AQL, 0.05, "AQL", cex = 0.8, pos = 4)
+# text(LTPD, 0.05, "LTPD", cex = 0.8, pos = 4)
+# 
+# 
+# legend_labels <- c()
+# legend_colors <- c()
+# legend_ltys <- c()
+# legend_lwds <- c()
+# 
+# # 1. Agregar el Plan Clásico a la leyenda
+# legend_labels <- c(legend_labels, paste0("Clásico Naive (", n_clasic, ", ", c_clasic, ")"))
+# legend_colors <- c(legend_colors, "gray50")
+# legend_ltys <- c(legend_ltys, 2)
+# legend_lwds <- c(legend_lwds, 2)
+# 
+# # 2. Definir paleta de colores para los 5 escenarios Óptimos
+# optimal_colors <- c("darkgreen", "blue", "orange", "red", "darkred")
+# lines(p_range, Pa_ga_base, lty = 1, lwd = 2, col = optimal_colors[i])
+# # Loop para añadir las 5 curvas Óptimas
+# for (i in 1:5) {
+#   n_opt_val <- resultados_riesgo[i, "n_opt"]
+#   c_opt_val <- resultados_riesgo[i, "c_opt"]
+#   
+#   Pa_opt <- Pa(n = n_opt_val, c = c_opt_val, p = p_range, N = N)
+#   
+#   # Dibujar Curva CO Óptima
+#   lines(p_range, Pa_opt, lty = 1, lwd = 2, col = optimal_colors[i])
+#   
+#   # Agregar Plan Óptimo a la leyenda
+#   legend_labels <- c(legend_labels, paste0("Óptimo (", proveedores_labels[i], ": ", n_opt_val, ", ", c_opt_val, ")"))
+#   legend_colors <- c(legend_colors, optimal_colors[i])
+#   legend_ltys <- c(legend_ltys, 1)
+#   legend_lwds <- c(legend_lwds, 2)
+# }
+# 
+# # Mostrar Leyenda Completa
 # legend("topright",
-#        legend = c("Naive (Uniforme)", proveedores_labels),
-#        col = c("gray50", colores),
-#        lty = c(2, rep(1, 5)),
-#        lwd = 2,
-#        cex = 0.9,
-#        title = "Prior (Beta)")
-
-# Resetear el layout (Importante para la estabilidad del entorno)
-layout(matrix(1), widths = 1, heights = 1)
-par(mfrow = c(1, 1))
+#        legend = legend_labels,
+#        col = legend_colors,
+#        lty = legend_ltys,
+#        lwd = legend_lwds,
+#        cex = 0.8,
+#        title = "Planes de Muestreo")
+# 
+# 
+# # -------------------------------------------------------------------------
+# # VISUALIZACIÓN 2 (PARTE INFERIOR): Densidades a Priori Agrupadas (1 Gráfico Grande)
+# # -------------------------------------------------------------------------
+# 
+# # Cambiar márgenes para el gráfico inferior
+# par(mar = c(5, 4, 3, 2) + 0.1)
+# 
+# # Calcular el límite Y máximo
+# max_y_limit <- max(dbeta(p_range, alpha_beta_params$alpha_b, alpha_beta_params$beta_b)) * 1.1
+# 
+# plot(p_range, dbeta(p_range, 1, 1), type = "l", col = "gray50", lty = 2, lwd = 2,
+#      main = "Distribuciones a Priori de la Calidad del Proveedor (p)",
+#      xlab = "Proporción Defectuosa (p)",
+#      ylab = "Densidad de Probabilidad f(p)",
+#      ylim = c(0, max_y_limit))
+# 
+# colores <- c("darkgreen", "blue", "orange", "red", "darkred")
+# for (i in 1:5) {
+#   lines(p_range, dbeta(p_range, alpha_beta_params[i, "alpha_b"], alpha_beta_params[i, "beta_b"]),
+#         col = colores[i], lwd = 2)
+# }
+# 
+# # Líneas de referencia para AQL y LTPD
+# abline(v = AQL, col = "black", lty = 3)
+# text(AQL, max_y_limit * 0.95,
+#      "AQL", cex = 0.8, pos = 4)
+# abline(v = LTPD, col = "black", lty = 3)
+# text(LTPD, max_y_limit * 0.95,
+#      "LTPD", cex = 0.8, pos = 4)
+# 
+# # legend("topright",
+# #        legend = c("Naive (Uniforme)", proveedores_labels),
+# #        col = c("gray50", colores),
+# #        lty = c(2, rep(1, 5)),
+# #        lwd = 2,
+# #        cex = 0.9,
+# #        title = "Prior (Beta)")
+# 
+# # Resetear el layout (Importante para la estabilidad del entorno)
+# layout(matrix(1), widths = 1, heights = 1)
+# par(mfrow = c(1, 1))
