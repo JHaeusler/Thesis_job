@@ -138,7 +138,7 @@ for (esce in cases) { # esce <- 1 + esce
   # 2. Obtener los pares de (alpha_b, beta_b) para la distribución Beta
   alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, length(p1)))
   
-  for (i in 1:length(p1)) { # i <- 1 + i
+  for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
     
     # find_beta encuentra los parámetros de la distribución Beta
     Shape <- find_beta(x1 = Esce[esce, 4], p1 = p1[i], x2 = Esce[esce, 5], p2 = 1 - p2[i]) 
@@ -178,7 +178,7 @@ for (esce in cases) { # esce <- 1 + esce
   
   # 4. Iterar sobre los escenarios y calcular los riesgos
   
-  for (j in 1:length(p1)) { # j <- 1 + j
+  for (j in 1:length(p1)) { # j <-6 1 + j
     
     # Usar los valores calculados de alpha y beta específicos para el proveedor i
     alpha_b_val <- alpha_beta_params[j, "alpha_b"]
@@ -204,12 +204,12 @@ for (esce in cases) { # esce <- 1 + esce
     
     # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
     
-    dens_a <- dbeta(Esce[esce, 2], alpha_b_val, beta_b_val)
-    dens_b <- dbeta(Esce[esce, 3], alpha_b_val, beta_b_val)
+    dens_a <- dbeta(Esce[esce, 4], alpha_b_val, beta_b_val)
+    dens_b <- dbeta(Esce[esce, 5], alpha_b_val, beta_b_val)
     
     # Ancho para el riesgo del productor: AQL - 0
     # Ancho para el riesgo del consumidor: 1 - LTPD
-    des_WRT <- k_p_ * (Esce[esce, 2] * dens_a * (Esce[esce, 4]/8)) + 
+    des_WRT <- k_p_ * ((Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
       (k_c_ * Esce[esce, 3] * dens_b * ((1 - Esce[esce, 5])/8))
     
     n_opt_found <- NA
@@ -217,8 +217,8 @@ for (esce in cases) { # esce <- 1 + esce
     cumple <- FALSE
     
     # Búsqueda exhaustiva
-    for (n_ in 1:Esce[esce, 1]) { # n_ <- 1 + n_
-      for (c_ in 0:(n_ - 1)) { # c_ <- 0 + 1 + c_
+    for (n_ in 1:Esce[esce, 1]) { # n_ <- 200 + n_
+      for (c_ in 0:(n_ - 1)) { # c_ <- 5 + 1 + c_
         
         risks_opt <- calc_wr(N_ = Esce[esce, 1], n = n_, c = c_, 
                              alpha_b = alpha_b_val, beta_b = beta_b_val, 
