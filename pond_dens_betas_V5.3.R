@@ -59,11 +59,11 @@ calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
 }
 
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
-calc_wr <- function(N_, n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
+calc_wr <- function(N_, n, c, alpha_b, beta_b, AQL_, LTPD_, k_p, k_c) {
   
   # 1. Calcular RAT (RAT_val)
-  wrp_val <- k_p*integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N_), xmin = 0, xmax = AQL, method = "Kron")
-  wrc_val <- k_c*integral(f = function(p) wr_c(p, n, c, alpha_b, beta_b, N_), xmin = LTPD, xmax = 1, method = "Kron")
+  wrp_val <- k_p*(1-phyper(c, N_ * AQL_, N_ * (1 - AQL_), n))
+  wrc_val <- k_c*phyper(c, N_ * LTPD_, N_ * (1 - LTPD_), n)
   wrt_val <- wrp_val + wrc_val
   
   return(c(WRP_val = wrp_val, WRC_val = wrc_val, WRT_val = wrt_val))
@@ -209,8 +209,7 @@ for (esce in cases) { # esce <- 1 + esce
     
     # Ancho para el riesgo del productor: AQL - 0
     # Ancho para el riesgo del consumidor: 1 - LTPD
-    des_WRT <- k_p_ * ((1 - Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
-      (k_c_ * Esce[esce, 3] * dens_b * ((1 - Esce[esce, 5])/8))
+    des_WRT <- k_p_ * Esce[esce, 2] + k_c_ * Esce[esce, 3]
     
     n_opt_found <- NA
     c_opt_found <- NA

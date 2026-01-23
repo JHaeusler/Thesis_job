@@ -178,7 +178,7 @@ for (esce in cases) { # esce <- 1 + esce
   
   # 4. Iterar sobre los escenarios y calcular los riesgos
   
-  for (j in 1:length(p1)) { # j <-6 1 + j
+  for (j in 1:length(p1)) { # j <- 1 + j
     
     # Usar los valores calculados de alpha y beta específicos para el proveedor i
     alpha_b_val <- alpha_beta_params[j, "alpha_b"]
@@ -204,12 +204,18 @@ for (esce in cases) { # esce <- 1 + esce
     
     # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
     
-    dens_a <- dbeta(Esce[esce, 4], alpha_b_val, beta_b_val)
-    dens_b <- dbeta(Esce[esce, 5], alpha_b_val, beta_b_val)
+    quant_p_a <- qhyper((1 - Esce[esce, 2]), Esce[esce, 1] * Esce[esce, 4],
+                        Esce[esce, 1] * (1 - Esce[esce, 4]), n_clasic)/n_clasic
+    quant_p_b <- qhyper(Esce[esce, 3], Esce[esce, 1] * Esce[esce, 5],
+                        Esce[esce, 1] * (1 - Esce[esce, 5]), n_clasic)/n_clasic
+    
+    
+    dens_a <- dbeta(quant_p_a, alpha_b_val, beta_b_val)
+    dens_b <- dbeta(quant_p_b, alpha_b_val, beta_b_val)
     
     # Ancho para el riesgo del productor: AQL - 0
     # Ancho para el riesgo del consumidor: 1 - LTPD
-    des_WRT <- k_p_ * ((1 - Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
+    des_WRT <- k_p_ * ((Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
       (k_c_ * Esce[esce, 3] * dens_b * ((1 - Esce[esce, 5])/8))
     
     n_opt_found <- NA
