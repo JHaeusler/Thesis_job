@@ -209,7 +209,7 @@ for (esce in cases) { # esce <- 1 + esce
     
     # Ancho para el riesgo del productor: AQL - 0
     # Ancho para el riesgo del consumidor: 1 - LTPD
-    des_WRT <- k_p_ * ((1 - Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
+    des_WRT <- k_p_ * ((Esce[esce, 2]) * dens_a * (Esce[esce, 4]/8)) + 
       (k_c_ * Esce[esce, 3] * dens_b * ((1 - Esce[esce, 5])/8))
     
     n_opt_found <- NA
