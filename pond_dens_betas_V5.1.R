@@ -242,7 +242,7 @@ for (esce in 1:dim(Esce)[1]) { # esce <- 1 + esce
 # --- Configuración del Panel ---
 # 12 ventanas (3 filas x 4 columnas) + espacio para leyenda
 # Definimos los colores solicitados
-colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", "goldenrod2", "tomato2")
+colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", "darkorange1", "tomato2")
 nombres_prov <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo")
 x11()
 # Ajustar márgenes: mfrow para la cuadrícula, oma para la leyenda global
@@ -286,4 +286,3 @@ legend("bottom", legend = nombres_prov, col = colores_prov,
 # Título general del panel
 mtext("Distribución de Probabilidad del Histórico por Tipo de Proveedor", 
       side = 3, line = -2, outer = TRUE, font = 2, cex = 1.2)
-
