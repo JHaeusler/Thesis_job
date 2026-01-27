@@ -3,9 +3,11 @@
 # --- Configuración del Panel ---
 # 12 ventanas (3 filas x 4 columnas) + espacio para leyenda
 # Definimos los colores solicitados
-colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", "darkorange1", "tomato2",
-                  "chartreuse2", "darkslategray")
-nombres_prov <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo","Naive", "OTB_est")
+colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", 
+                  "darkorange1", "tomato2", "chartreuse2",
+                  "darkslategray", "lightsalmon1", "magenta")
+nombres_prov <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo",
+                  "Naive", "OTB_est", "Clásico", "GA")
 
 # guardar archivo
 file_name <- paste0("planes.png")
@@ -23,8 +25,8 @@ for (k in cases) { # k <- 1 + k
   # Extraer parámetros del escenario k
   planes <- lista_tablas_resultados[[k]]#[1:5,]
   
-  n_plans <- planes$n_opt
-  c_plans <- planes$c_opt
+  n_plans <- c(planes$n_opt, n_clasic, n_ga)
+  c_plans <- c(planes$c_opt, c_clasic, c_ga)
   
   
   # Configurar el área de dibujo para la ventana k

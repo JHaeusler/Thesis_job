@@ -120,20 +120,20 @@ for (esce in cases) { # esce <- 1 + esce
   n_clasic <- plan_clasic$n
   c_clasic <- plan_clasic$c
   
-  # n_ran <- 2:Esce[esce, 1]
-  # c_ran <- 0:(max(n_ran) - 1)
-  # 
-  # b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
-  # b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
-  # 
-  # plan_genetico <- ga(type = "binary", nBits = l1 + l2,
-  #                     fitness = fitness, popSize = 200,
-  #                     maxiter = 200, run = 100, seed = 060722)
-  # 
-  # plan_ga <- decode(plan_genetico@solution)
-  # 
-  # n_ga <- plan_ga[1]
-  # c_ga <- plan_ga[2]
+  n_ran <- 1:Esce[esce, 1]
+  c_ran <- 0:(max(n_ran) - 1)
+
+  b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
+  b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
+
+  plan_genetico <- ga(type = "binary", nBits = l1 + l2,
+                      fitness = fitness, popSize = 200,
+                      maxiter = 200, run = 100, seed = 060722)
+
+  plan_ga <- decode(plan_genetico@solution)
+
+  n_ga <- plan_ga[1]
+  c_ga <- plan_ga[2]
   
   # 2. Obtener los pares de (alpha_b, beta_b) para la distribución Beta
   alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, length(p1)))
@@ -154,8 +154,8 @@ for (esce in cases) { # esce <- 1 + esce
     n_clasic = n_clasic,
     c_clasic = c_clasic,
     
-    n_ga = NA, #n_ga,
-    c_ga = NA, #c_ga,
+    n_ga = NA, n_ga,
+    c_ga = NA, c_ga,
     
     P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
     P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
