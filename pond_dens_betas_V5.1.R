@@ -239,16 +239,25 @@ for (esce in 1:dim(Esce)[1]) { # esce <- 1 + esce
 
 } 
 
+
+
 # --- Configuración del Panel ---
 # 12 ventanas (3 filas x 4 columnas) + espacio para leyenda
 # Definimos los colores solicitados
 colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", "darkorange1", "tomato2")
 nombres_prov <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo")
-x11()
+
+# guardar archivo
+file_name <- paste0("densidades_historico.png")
+png(file_name, width = 1200, height = 600, res = 100)
+
+
+# x11()
 # Ajustar márgenes: mfrow para la cuadrícula, oma para la leyenda global
 par(mfrow = c(4, 3), mar = c(3, 3, 2, 1), oma = c(4, 1, 2, 1))
 cases <- seq(1, dim(Esce)[1], 6)
-# Suponiendo que queremos visualizar los primeros 12 escenarios de la lista
+
+
 for (k in cases) { # k <- 1 + k
   
   # Extraer parámetros del escenario k
@@ -268,8 +277,9 @@ for (k in cases) { # k <- 1 + k
   
   # Graficar cada una de las 5 densidades
   for (l in 1:dim(params)[1]) { # l <- 1 + l
-    lines(x_seq, dbeta(x_seq, shape1 = params$alpha_b[l], shape2 = params$beta_b[l]), 
-          col = colores_prov[l], lwd = 2)
+    lines(x_seq, dbeta(x_seq, shape1 = params$alpha_b[l],
+                       shape2 = params$beta_b[l]), 
+          col = colores_prov[l], lwd = 1.5)
   }
   
   # Agregar una rejilla sutil para facilitar la lectura
@@ -286,3 +296,5 @@ legend("bottom", legend = nombres_prov, col = colores_prov,
 # Título general del panel
 mtext("Distribución de Probabilidad del Histórico por Tipo de Proveedor", 
       side = 3, line = -2, outer = TRUE, font = 2, cex = 1.2)
+
+dev.off()

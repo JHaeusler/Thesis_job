@@ -87,6 +87,7 @@ plan <- find.plan(PRP = c(AQL, 1 - alpha), CRP = c(LTPD, beta),
 n_kir <- plan$n
 c_kir <- plan$c
 
+# guardar archivo
 file_name <- paste0("OC_kiermeier.png")
 png(file_name, width = 800, height = 600, res = 100)
 
