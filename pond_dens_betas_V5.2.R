@@ -145,12 +145,12 @@ for (esce in cases) { # esce <- 1 + esce
     alpha_beta_params[i, "alpha_b"] <- Shape$shape1
     alpha_beta_params[i, "beta_b"] <- Shape$shape2
   }
-  alpha_beta_params <- rbind(alpha_beta_params, c(1, 1))
+  alpha_beta_params <- rbind(alpha_beta_params, c(1, 1), c(4.775, 75.553))
   
   # 3. Inicializar la tabla de resultados
   resultados_riesgo <- data.frame(
     Escenario = 1:dim(alpha_beta_params)[1],
-    Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "Naive"),# paste("otro", 1:(abs(5-length(p1))))),
+    Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "Naive", "OTB_est"),# paste("otro", 1:(abs(5-length(p1))))),
     n_clasic = n_clasic,
     c_clasic = c_clasic,
     
@@ -178,7 +178,7 @@ for (esce in cases) { # esce <- 1 + esce
   
   # 4. Iterar sobre los escenarios y calcular los riesgos
   
-  for (j in 1:length(p1)) { # j <-6 1 + j
+  for (j in 1:dim(alpha_beta_params)[1]) { # j <-6 1 + j
     
     # Usar los valores calculados de alpha y beta específicos para el proveedor i
     alpha_b_val <- alpha_beta_params[j, "alpha_b"]
@@ -279,5 +279,4 @@ for (esce in cases) { # esce <- 1 + esce
   # Guardar los parámetros de las densidades Beta calculadas para este escenario
   lista_parametros_beta[[esce]] <- alpha_beta_params
   
-} 
-
+}
