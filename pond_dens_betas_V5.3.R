@@ -16,17 +16,17 @@ library(sjstats)
 library(AcceptanceSampling)
 library(GA)
 # --- Variables Globales y Parámetros del Problema ---
-N <- 200        # Tamaño del lote
-alpha <- 0.01   # Riesgo del productor (para el plan clásico)
-beta <- 0.07    # Riesgo del consumidor (para el plan clásico)
-AQL <- 0.01     # Nivel de Calidad Aceptable
-LTPD <- 0.05    # Tolerancia de Porcentaje Defectuoso de Lote
+N <- c(200, 1000)        # Tamaño del lote
+alpha <- c(0.01, 0.05)   # Riesgo del productor (para el plan clásico)
+beta <- c(0.05, 0.10, 0.20)    # Riesgo del consumidor (para el plan clásico)
+AQL <- c(0.01, 0.02, 0.05)     # Nivel de Calidad Aceptable
+LTPD <- c(0.08, 0.10, 0.15, 0.20)    # Tolerancia de Porcentaje Defectuoso de Lote
 
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
 # p2 = Probabilidad de No Aceptación (o Rechazo) en el LTPD
-p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10)
-p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
+p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10, 0.40)
+p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
 
 # Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
 calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
@@ -46,14 +46,19 @@ calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
   return(c(WRP_val = wrp_val, WRC_val = wrc_val, WR_val = WR_val))
 }
 
-# 1. Determinar el Plan Clásico (basado en alpha y beta fijos)
-plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
-                         CRP = c(LTPD, beta),
-                         N = N, type = "hypergeom")
 
-# n_clasic <- plan_clasic$n
-# c_clasic <- plan_clasic$c
-# 
+esce <- expand.grid(N = N, alpha = alpha, beta = beta, AQL = AQL,
+                    LTPD = LTPD)
+
+for(escenarios in 1:dim(esce)[1]){ # escenarios <- 1 + escenarios
+# 1. Determinar el Plan Clásico (basado en alpha y beta fijos)
+plan_clasic <- find.plan(PRP = c(esce[escenarios, 4], 1 - esce[escenarios, 2]),
+                         CRP = c(esce[escenarios, 5], esce[escenarios, 3]),
+                         N = esce[escenarios, 1], type = "hypergeom")
+
+n_clasic <- plan_clasic$n
+c_clasic <- plan_clasic$c
+
 # decode <- function(string){
 #   string <- gray2binary(string)
 #   n <- binary2decimal(string[1:l1])
@@ -88,7 +93,7 @@ plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
 # c_ga <- plan_ga[2]
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
-prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
+prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL = esce[escenarios, 4], LTPD = esce[escenarios, 5])
 P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
 P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
 
@@ -100,22 +105,45 @@ alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, 
 for (i in 1:length(p1)) { # i <- 1 + i
 
   # find_beta encuentra los parámetros de la distribución Beta
-  Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
+  Shape <- find_beta(x1 = esce[escenarios, 4], p1 = p1[i], x2 = esce[escenarios, 5], p2 = 1 - p2[i]) 
   alpha_beta_params[i, "alpha_b"] <- Shape$shape1
   alpha_beta_params[i, "beta_b"] <- Shape$shape2
 }
 
 alpha_beta_params <- rbind(alpha_beta_params, c(1, 1))
 
+
+
+plot(seq(0,1, 0.001),
+     dbeta(seq(0,1, 0.001), alpha_beta_params$alpha_b[1], alpha_beta_params$beta_b[1]),
+     type = "l")
+lines(seq(0,1, 0.001),
+      dbeta(seq(0,1, 0.001), alpha_beta_params$alpha_b[2], alpha_beta_params$beta_b[2])
+      )
+
+lines(seq(0,1, 0.001),
+      dbeta(seq(0,1, 0.001), alpha_beta_params$alpha_b[3], alpha_beta_params$beta_b[3])
+)
+
+lines(seq(0,1, 0.001),
+      dbeta(seq(0,1, 0.001), alpha_beta_params$alpha_b[4], alpha_beta_params$beta_b[4])
+)
+
+lines(seq(0,1, 0.001),
+      dbeta(seq(0,1, 0.001), alpha_beta_params$alpha_b[5], alpha_beta_params$beta_b[5])
+)
+
+abline(v = c(esce[escenarios, 4], esce[escenarios, 5]), lty = 2)
+
 # 3. Inicializar la tabla de resultados
 resultados_riesgo <- data.frame(
   Escenario = 1:dim(alpha_beta_params)[1],
-  Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "naive"),
+  #Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "naive"),
   n_clasic = n_clasic,
   c_clasic = c_clasic,
 
-  n_ga = n_ga,
-  c_ga = c_ga,
+  n_ga = 2,#n_ga,
+  c_ga = 3,#c_ga,
   
   # Densidad Acumulada (Masa de Probabilidad) del Prior
   P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
@@ -155,7 +183,7 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
   
   k_p_ <- as.numeric(prob_mass_beta["P_Good"])
   k_c_ <- as.numeric((prob_mass_beta["P_Bad"]))
-  
+  min_WR <- k_p_ * alpha + k_c_ * beta
   # II. Calcular los riesgos para el PLAN CLÁSICO (Bajo el Prior Beta ESPECÍFICO)
   risks_clasic <- calc_wr(n = n_clasic, c = c_clasic, 
                           alpha_b = alpha_b_val, beta_b = beta_b_val, 
@@ -169,7 +197,7 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
 
   n_opt_found <- NA
   c_opt_found <- NA
-  min_RAT <- k_p_ * alpha + k_c_ * beta
+  
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:N) { # n_ <- 1 + n_
@@ -179,10 +207,10 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
                            AQL, LTPD, k_p = k_p_, k_c = k_c_)
 
-      RAT_current <- risks_opt["WR_val"]
+      WR_current <- risks_opt["WR_val"]
 
       # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
-      if (RAT_current <= min_RAT) {
+      if (WR_current <= min_WR) {
         n_opt_found <- n_
         c_opt_found <- c_
         cumple <- TRUE
@@ -219,6 +247,7 @@ if (!is.na(n_opt_found)) {
   resultados_riesgo[i, "WRC_Ganancia"] <- NA
   resultados_riesgo[i, "WR_Ganancia"] <- NA
   
+}
 }
 }
 # 5. Mostrar la tabla de resultados final
