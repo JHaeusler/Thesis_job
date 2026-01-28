@@ -5,10 +5,10 @@
 # Definimos los colores solicitados
 colores_prov <- c("darkolivegreen4", "dodgerblue1", "gold2", 
                   "darkorange1", "tomato2", "chartreuse2",
-                  "darkslategray", "lightsalmon1", "magenta")
+                  "darkslategray", "red4", "magenta")
 nombres_prov <- c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo",
                   "Naive", "OTB_est", "Clásico", "GA")
-
+lty_St <- c(rep(1, 5), rep(3, 4))
 # guardar archivo
 file_name <- paste0("planes.png")
 png(file_name, width = 1200, height = 600, res = 100)
@@ -25,8 +25,8 @@ for (k in cases) { # k <- 1 + k
   # Extraer parámetros del escenario k
   planes <- lista_tablas_resultados[[k]]#[1:5,]
   
-  n_plans <- c(planes$n_opt, n_clasic, n_ga)
-  c_plans <- c(planes$c_opt, c_clasic, c_ga)
+  n_plans <- c(planes$n_opt, planes$n_clasic[1], planes$n_ga.1[1])
+  c_plans <- c(planes$c_opt, planes$c_clasic[1], planes$c_ga.1[1])
   
   
   # Configurar el área de dibujo para la ventana k
@@ -42,9 +42,9 @@ for (k in cases) { # k <- 1 + k
          col = "bisque3", lty = 2)
   
   # Graficar cada una de las 5 densidades
-  for (l in 1:dim(planes)[1]) { # l <- 1 + l
+  for (l in 1:length(n_plans)) { # l <- 1 + l
     Pa_planes <- phyper(c_plans[l], N*x_seq, N*(1 - x_seq), n_plans[l])
-    lines(x_seq, Pa_planes, col = colores_prov[l], lwd = 1.5)
+    lines(x_seq, Pa_planes, col = colores_prov[l], lwd = 1.5, lty = lty_St[l])
   }
   
   # Agregar una rejilla sutil para facilitar la lectura
@@ -55,7 +55,7 @@ for (k in cases) { # k <- 1 + k
 # Volvemos al espacio exterior para la leyenda
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
-legend("bottom", legend = nombres_prov, col = colores_prov, 
+legend("bottom", legend = nombres_prov, col = colores_prov, lty =lty_St,
        lwd = 3, horiz = TRUE, bty = "n", inset = c(0, 0.002), cex = 1.2)
 
 # Título general del panel

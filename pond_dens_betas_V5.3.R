@@ -1,14 +1,13 @@
-<<<<<<< HEAD
 # Script para comparar planes de muestreo de aceptación clásicos
 # con planes óptimos basados en el Riesgo Ponderado.
 
-=======
+
 # Propuesta para diseño de planes de muestreo simple para atributos
 # considerando el histórico de la proporción estimada de unidades
 # defectuosas en la inspección de lotes
 
 # Calidad del proveedor según el histórico
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
+
 # Las prioris de calidad de los proveedores se definen por pares (PA en AQL, PA en LTPD)
 # Excelente proveedor: PA(AQL)=0.95, PA(LTPD)=1-0.0001
 # Buen proveedor: PA(AQL)=0.75, PA(LTPD)=1-0.05
@@ -18,7 +17,7 @@
 
 # --- Carga de Librerías ---
 # install.packages("pracma") # Si no lo tienes instalado
-<<<<<<< HEAD
+
 library(pracma)
 # install.packages("sjstats")
 library(sjstats)
@@ -36,7 +35,7 @@ LTPD <- c(0.08, 0.10, 0.15, 0.20)    # Tolerancia de Porcentaje Defectuoso de Lo
 # p2 = Probabilidad de No Aceptación (o Rechazo) en el LTPD
 p1 <- c(0.95, 0.75, 0.50, 0.25, 0.10, 0.40)
 p2 <- c(1e-4, 0.05, 0.10, 0.25, 0.40, 0.40) # 1 - PA(LTPD) -> Beta (Riesgo del Consumidor)
-=======
+
 # install.packages("sjstats")
 
 library(pracma)
@@ -75,7 +74,7 @@ wr_c <- function(p, n, c, alpha_b, beta_b, N_){
   cons_wr <- Pa(n, c, p, N) * f.p
   return(cons_wr)
 }
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
+
 
 # Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
 calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
@@ -85,7 +84,7 @@ calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
 }
 
 # Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
-<<<<<<< HEAD
+
 calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
   # 1. Calcular RAT (RAT_val)
   #rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
@@ -425,7 +424,7 @@ if (!is.na(n_opt_found)) {
 # # Resetear el layout (Importante para la estabilidad del entorno)
 # layout(matrix(1), widths = 1, heights = 1)
 # par(mfrow = c(1, 1))
-=======
+
 calc_wr <- function(N_, n, c, alpha_b, beta_b, AQL_, LTPD_, k_p, k_c) {
   
   # 1. Calcular RAT (RAT_val)
@@ -647,4 +646,4 @@ for (esce in cases) { # esce <- 1 + esce
   
 } 
 
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
+
