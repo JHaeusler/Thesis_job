@@ -15,12 +15,23 @@ library(pracma)
 library(sjstats)
 library(AcceptanceSampling)
 library(GA)
+
 # --- Variables Globales y Parámetros del Problema ---
+<<<<<<< HEAD
 N <- 200        # Tamaño del lote
 alpha <- 0.01   # Riesgo del productor (para el plan clásico)
 beta <- 0.07    # Riesgo del consumidor (para el plan clásico)
 AQL <- 0.01     # Nivel de Calidad Aceptable
 LTPD <- 0.05    # Tolerancia de Porcentaje Defectuoso de Lote
+=======
+N <- c(200, 1000)        # Tamaño del lote
+alpha <- c(0.01, 005)   # Riesgo del productor (para el plan clásico)
+beta <- c(0.05, 0.10, 0.20)    # Riesgo del consumidor (para el plan clásico)
+AQL <- c(0.01, 0.02, 0.05)     # Nivel de Calidad Aceptable
+LTPD <- c(0.08, 0.10, 0.15, 0.20)    # Tolerancia de Porcentaje Defectuoso de Lote
+
+Esce <- expand.grid(N = N, alpha = alpha, beta = beta, AQL = AQL, LTPD = LTPD)
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 
 # Vectores de probabilidades para los 5 escenarios
 # p1 = Probabilidad de Aceptación en el AQL
@@ -41,15 +52,25 @@ calc_wr <- function(n, c, alpha_b, beta_b, AQL, LTPD, k_p, k_c) {
   #rp_val <- integral(f = function(p) wr_p(p, n, c, alpha_b, beta_b, N), xmin = 0, xmax = AQL, method = "Kron")
   wrp_val <- k_p*(1-phyper(c, N * AQL, N * (1 - AQL), n))
   wrc_val <- k_c*phyper(c, N * LTPD, N * (1 - LTPD), n)
+<<<<<<< HEAD
   WR_val <- wrp_val + wrc_val
 
   return(c(WRP_val = wrp_val, WRC_val = wrc_val, WR_val = WR_val))
+=======
+  wrt_val <- wrp_val + wrc_val
+
+  return(c(WRP_val = wrp_val, WRC_val = wrc_val, WRT_val = wrt_val))
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 }
 
+
+for (esce in 1:dim(Esce)[1]) { # esce <- 1 + esce
+  
+
 # 1. Determinar el Plan Clásico (basado en alpha y beta fijos)
-plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
-                         CRP = c(LTPD, beta),
-                         N = N, type = "hypergeom")
+plan_clasic <- find.plan(PRP = c(Esce[esce, 4], 1 - Esce[esce, 2]),
+                         CRP = c(Esce[esce, 5], Esce[esce, 3]),
+                         N = Esce[esce, 1], type = "hypergeom")
 
 # n_clasic <- plan_clasic$n
 # c_clasic <- plan_clasic$c
@@ -88,9 +109,27 @@ plan_clasic <- find.plan(PRP = c(AQL, 1 - alpha),
 # c_ga <- plan_ga[2]
 
 # Y la masa de probabilidad (densidad acumulada) para el prior uniforme
+<<<<<<< HEAD
 prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, AQL, LTPD)
 P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
 P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
+=======
+# prob_mass_uniforme <- calc_prob_mass(alpha_b = 1, beta_b = 1, Esce[esce, 4], Esce[esce, 5])
+# P_Mass_Good_Naive <- prob_mass_uniforme["P_Good"]
+# P_Mass_Bad_Naive <- prob_mass_uniforme["P_Bad"]
+# 
+# k_p_naive <- as.numeric(P_Mass_Good_Naive)
+# k_c_naive <- as.numeric((1 - P_Mass_Bad_Naive))
+# --- CÁLCULO DE LÍNEA BASE BAJO IGNORANCIA (UNIFORME Beta(1, 1)) ---
+# Calculamos los riesgos individuales RP y RC para el Plan Clásico bajo la densidad Uniforme
+# ESTE ES EL RIESGO DE REFERENCIA: Plan Clásico (Naive)
+# risks_uniforme <- calc_wr(n = n_clasic, c = c_clasic, 
+#                           alpha_b = 1, beta_b = 1, # Uniforme U(0,1)
+#                           AQL, LTPD, k_p = k_p_naive, k_c = k_c_naive)
+# RP_U01_naive <- risks_uniforme["RP_val"]
+# RC_U01_naive <- risks_uniforme["RC_val"]
+# RAT_U01_naive <- risks_uniforme["RAT_val"] 
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 
 # -------------------------------------------------------------------
 
@@ -100,7 +139,7 @@ alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, 
 for (i in 1:length(p1)) { # i <- 1 + i
 
   # find_beta encuentra los parámetros de la distribución Beta
-  Shape <- find_beta(x1 = AQL, p1 = p1[i], x2 = LTPD, p2 = 1 - p2[i]) 
+  Shape <- find_beta(x1 = Esce[esce, 4], p1 = p1[i], x2 = Esce[esce, 5], p2 = 1 - p2[i]) 
   alpha_beta_params[i, "alpha_b"] <- Shape$shape1
   alpha_beta_params[i, "beta_b"] <- Shape$shape2
 }
@@ -109,8 +148,13 @@ alpha_beta_params <- rbind(alpha_beta_params, c(1, 1))
 
 # 3. Inicializar la tabla de resultados
 resultados_riesgo <- data.frame(
+<<<<<<< HEAD
   Escenario = 1:dim(alpha_beta_params)[1],
   Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "naive"),
+=======
+  Escenario = 1:length(p1),
+  Proveedor = c(c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"), paste("otro", 1:(abs(5-length(p1))))),
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   n_clasic = n_clasic,
   c_clasic = c_clasic,
 
@@ -118,40 +162,54 @@ resultados_riesgo <- data.frame(
   c_ga = c_ga,
   
   # Densidad Acumulada (Masa de Probabilidad) del Prior
-  P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
-  P_Mass_Bad_Naive = P_Mass_Bad_Naive,   # P(p > LTPD | Naive)
+  # P_Mass_Good_Naive = P_Mass_Good_Naive, # P(p < AQL | Naive)
+  # P_Mass_Bad_Naive = P_Mass_Bad_Naive,   # P(p > LTPD | Naive)
   P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
   P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
   # Riesgos de la Línea Base (Plan Clásico, Densidad Uniforme)
 
+<<<<<<< HEAD
   RP_clasic = NA,
   RC_clasic = NA,
   RAT_clasic = NA,
+=======
+  # RP_naive = RP_U01_naive,
+  # RC_naive = RC_U01_naive,
+  # RAT_naive = RAT_U01_naive,
+  # Riesgos bajo Información (Plan Clásico - Solo para referencia)
+  WRP_clasic = NA,
+  WRC_clasic = NA,
+  WRT_clasic = NA,
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   # Plan Óptimo (Minimiza TWR bajo Información)
   n_opt = NA,
   c_opt = NA,
-  RP_opt = NA,
-  RC_opt = NA,
-  RAT_opt = NA,
+  WRP_opt = NA,
+  WRC_opt = NA,
+  WRT_opt = NA,
 
   # Ganancias (Plan Clásico Naive vs. Plan Óptimo Informado)
-  RP_Ganancia = NA, 
-  RC_Ganancia = NA,
-  RAT_Ganancia = NA
+  WRP_Ganancia = NA, 
+  WRC_Ganancia = NA,
+  WRT_Ganancia = NA
 )
 
 # 4. Iterar sobre los 5 escenarios y calcular los riesgos
 
+<<<<<<< HEAD
 for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
+=======
+for (j in 1:length(p1)) { # j <- 1 + j
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   
   # Usar los valores calculados de alpha y beta específicos para el proveedor i
-  alpha_b_val <- alpha_beta_params[i, "alpha_b"]
-  beta_b_val <- alpha_beta_params[i, "beta_b"]
+  alpha_b_val <- alpha_beta_params[j, "alpha_b"]
+  beta_b_val <- alpha_beta_params[j, "beta_b"]
   
   # I. Calcular la masa de probabilidad para el Prior Beta específico (Informado)
-  prob_mass_beta <- calc_prob_mass(alpha_b = alpha_b_val, beta_b = beta_b_val, AQL, LTPD)
-  resultados_riesgo[i, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
-  resultados_riesgo[i, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
+  prob_mass_beta <- calc_prob_mass(alpha_b = alpha_b_val, beta_b = beta_b_val, Esce[esce, 4], Esce[esce, 5])
+  resultados_riesgo[j, "P_Mass_Good_Beta"] <- prob_mass_beta["P_Good"]
+  resultados_riesgo[j, "P_Mass_Bad_Beta"] <- prob_mass_beta["P_Bad"]
   
   k_p_ <- as.numeric(prob_mass_beta["P_Good"])
   k_c_ <- as.numeric((prob_mass_beta["P_Bad"]))
@@ -160,6 +218,14 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
   risks_clasic <- calc_wr(n = n_clasic, c = c_clasic, 
                           alpha_b = alpha_b_val, beta_b = beta_b_val, 
                           AQL, LTPD, k_p = k_p_, k_c = k_c_)
+<<<<<<< HEAD
+=======
+  
+  resultados_riesgo[i, "WRT_clasic"] <- risks_clasic["WRT_val"]
+  resultados_riesgo[i, "WRP_clasic"] <- risks_clasic["WRP_val"]
+  resultados_riesgo[i, "WRC_clasic"] <- risks_clasic["WRC_val"]
+  
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   
   resultados_riesgo[i, "WR_clasic"] <- risks_clasic["WR_val"]
   resultados_riesgo[i, "WRP_clasic"] <- risks_clasic["WRP_val"]
@@ -169,7 +235,11 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
 
   n_opt_found <- NA
   c_opt_found <- NA
+<<<<<<< HEAD
   min_RAT <- k_p_ * alpha + k_c_ * beta
+=======
+  des_WRT <- k_p_ * alpha + k_c_ * beta
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   cumple <- FALSE
   # Búsqueda exhaustiva: Itera n de 1 hasta n_clasic (máximo tamaño de muestra del plan clásico)
   for (n_ in 1:N) { # n_ <- 1 + n_
@@ -178,11 +248,18 @@ for (i in 1:dim(alpha_beta_params)[1]) { # i <- 1 + i
       risks_opt <- calc_wr(n = n_, c = c_, 
                            alpha_b = alpha_b_val, beta_b = beta_b_val, 
                            AQL, LTPD, k_p = k_p_, k_c = k_c_)
+<<<<<<< HEAD
 
       RAT_current <- risks_opt["WR_val"]
+=======
+      
+      WRP_current <- risks_opt["WRP_val"]
+      WRC_current <- risks_opt["WRC_val"]
+      WRT_current <- risks_opt["WRT_val"]
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 
       # Usando la lógica de tu código: buscar un plan 'mejor' que el plan Naive
-      if (RAT_current <= min_RAT) {
+      if (WRT_current <= des_WRT) {
         n_opt_found <- n_
         c_opt_found <- c_
         cumple <- TRUE
@@ -201,27 +278,49 @@ resultados_riesgo[i, "c_opt"] <- c_opt_found
 if (!is.na(n_opt_found)) {
   risks_opt_final <- calc_wr(n = n_opt_found, c = c_opt_found, 
                              alpha_b = alpha_b_val, beta_b = beta_b_val, 
+<<<<<<< HEAD
                              AQL, LTPD, k_p = k_p_, k_c = k_c_) 
   
   resultados_riesgo[i, "WR_opt"] <- risks_opt_final["WR_val"]
+=======
+                             Esce[esce, 4], Esce[esce, 5], k_p = k_p_, k_c = k_c_) 
+  
+  resultados_riesgo[i, "WRT_opt"] <- risks_opt_final["WRT_val"]
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   resultados_riesgo[i, "WRP_opt"] <- risks_opt_final["WRP_val"]
   resultados_riesgo[i, "WRC_opt"] <- risks_opt_final["WRC_val"]
   
   # V. ¡Cálculo de Ganancias Añadido!
   # Ganancia = Riesgo Naive - Riesgo Óptimo
+<<<<<<< HEAD
 
 } else {
   resultados_riesgo[i, "WR_opt"] <- NA
+=======
+  resultados_riesgo[i, "WRP_Ganancia"] <- resultados_riesgo[i, "WRP_clasic"] - resultados_riesgo[i, "WRP_opt"]
+  resultados_riesgo[i, "WRC_Ganancia"] <- resultados_riesgo[i, "WRC_clasic"] - resultados_riesgo[i, "WRC_opt"]
+  resultados_riesgo[i, "WRT_Ganancia"] <- resultados_riesgo[i, "WRT_clasic"] - resultados_riesgo[i, "WRT_opt"]
+  
+  
+} else {
+  resultados_riesgo[i, "WRT_opt"] <- NA
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   resultados_riesgo[i, "WRP_opt"] <- NA
   resultados_riesgo[i, "WRC_opt"] <- NA
   
   resultados_riesgo[i, "WRP_Ganancia"] <- NA
   resultados_riesgo[i, "WRC_Ganancia"] <- NA
+<<<<<<< HEAD
   resultados_riesgo[i, "WR_Ganancia"] <- NA
+=======
+  resultados_riesgo[i, "WRT_Ganancia"] <- NA
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
   
 }
 }
+}
 # 5. Mostrar la tabla de resultados final
+<<<<<<< HEAD
 # options(digits = 6) 
 # print("Tabla de Comparación de Riesgos Individuales (RP y RC): Naive vs. Bayesiano Óptimo")
 # print("------------------------------------------------------------------------------------")
@@ -239,6 +338,25 @@ if (!is.na(n_opt_found)) {
 # 
 # print(resultados_final_comparado)
 # 
+=======
+options(digits = 6) 
+print("Tabla de Comparación de Riesgos Individuales (RP y RC): Naive vs. Bayesiano Óptimo")
+print("------------------------------------------------------------------------------------")
+
+# SELECCIÓN Y REORDENAMIENTO: Se incluyen las columnas de masa de probabilidad a priori
+resultados_final_comparado <- resultados_riesgo[, c(
+  "Escenario", "Proveedor", 
+  "n_clasic", "c_clasic", 
+  "n_opt", "c_opt", 
+  "P_Mass_Good_Naive", "P_Mass_Bad_Naive", 
+  "P_Mass_Good_Beta", "P_Mass_Bad_Beta",
+  "RP_naive", "RP_opt", "RP_Ganancia",
+  "RC_naive", "RC_opt", "RC_Ganancia"
+)]
+
+print(resultados_final_comparado)
+
+>>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 # 
 # 
 # # -------------------------------------------------------------------------

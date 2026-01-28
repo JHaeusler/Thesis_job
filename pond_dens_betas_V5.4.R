@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# --- Carga de Librerías ---
-=======
 # Propuesta para diseño de planes de muestreo simple para atributos
 # considerando el histórico de la proporción estimada de unidades
 # defectuosas en la inspección de lotes
@@ -17,126 +14,20 @@
 # install.packages("pracma") # Si no lo tienes instalado
 # install.packages("sjstats")
 
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 library(pracma)
 library(sjstats)
 library(AcceptanceSampling)
 library(GA)
 
-<<<<<<< HEAD
-# --- Configuración de Parámetros ---
-N_vec <- c(200, 1000)
-alpha_des <- c(0.01, 0.03, 0.05)
-beta_des <- c(0.07, 0.10, 0.15, 0.20)
-AQL_vec <- c(0.01, 0.03, 0.05)
-LTPD_vec <- c(0.05, 0.10, 0.15)
-
-# Generación de la matriz de combinaciones
-combinaciones <- expand.grid(N = N_vec, AQL = AQL_vec, LTPD = LTPD_vec, 
-                             alpha = alpha_des, beta = beta_des)
-
-
-# --- Aplicación de la restricción: AQL debe ser estrictamente menor que LTPD ---
-combinaciones <- combinaciones[combinaciones$AQL < combinaciones$LTPD, ]
-
-# (Opcional) Reiniciar los índices del dataframe para que sean correlativos
-rownames(combinaciones) <- NULL
-
-
-# Configuración de Perfiles de Proveedor
-perfiles <- data.frame(
-  Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo"),
-  p1 = c(0.95, 0.75, 0.50, 0.25, 0.10),
-  p2 = c(1e-4, 0.05, 0.10, 0.25, 0.40)
-)
-
-# Lista para almacenar los resultados
-lista_resultados <- list()
-
-# --- Funciones Auxiliares ---
-=======
 # --- Funciones de Riesgo Ponderado y Masa de Probabilidad ---
 
 # Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
 calc_prob_mass <- function(alpha_b, beta_b, AQL, LTPD) {
   P_Good <- pbeta(AQL, shape1 = alpha_b, shape2 = beta_b)
   P_Bad <- 1 - pbeta(LTPD, shape1 = alpha_b, shape2 = beta_b)
   return(c(P_Good = P_Good, P_Bad = P_Bad))
 }
 
-<<<<<<< HEAD
-calc_wr <- function(n, c, N_val, AQL_val, LTPD_val, k_p, k_c) {
-  wrp_val <- k_p * (1 - phyper(c, N_val * AQL_val, N_val * (1 - AQL_val), n))
-  wrc_val <- k_c * phyper(c, N_val * LTPD_val, N_val * (1 - LTPD_val), n)
-  return(c(WRP_val = wrp_val, WRC_val = wrc_val, WR_val = wrp_val + wrc_val))
-}
-
-# --- Ciclo Principal ---
-for (j in 1:nrow(combinaciones)) {
-  
-  # Extraer parámetros actuales
-  curr <- combinaciones[j, ]
-  
-  # 1. Determinar Plan Clásico para esta combinación
-  plan_clasic <- find.plan(PRP = c(curr$AQL, 1 - curr$alpha),
-                           CRP = c(curr$LTPD, curr$beta),
-                           N = curr$N, type = "hypergeom")
-  
-  n_cl <- plan_clasic$n
-  c_cl <- plan_clasic$c
-  
-  # 2. Preparar tabla para los 5 proveedores + Naive
-  res_escenario <- data.frame(
-    Proveedor = c(perfiles$Proveedor, "Naive"),
-    n_cl = n_cl, c_cl = c_cl,
-    n_opt = NA, c_opt = NA,
-    WR_cl = NA, WR_opt = NA, Ganancia = NA
-  )
-  
-  # 3. Iterar por cada perfil de proveedor dentro de la combinación
-  for (i in 1:6) {
-    # Determinar parámetros Beta
-    if (i <= 5) {
-      Shape <- find_beta(x1 = curr$AQL, p1 = perfiles$p1[i], 
-                         x2 = curr$LTPD, p2 = 1 - perfiles$p2[i])
-      a_b <- Shape$shape1; b_b <- Shape$shape2
-    } else {
-      a_b <- 1; b_b <- 1 # Caso Naive (Uniforme)
-    }
-    
-    mass <- calc_prob_mass(a_b, b_b, curr$AQL, curr$LTPD)
-    kp <- as.numeric(mass["P_Good"]); kc <- as.numeric(mass["P_Bad"])
-    
-    # Riesgo Plan Clásico
-    r_cl <- calc_wr(n_cl, c_cl, curr$N, curr$AQL, curr$LTPD, kp, kc)
-    res_escenario$WR_cl[i] <- r_cl["WR_val"]
-    
-    # Búsqueda Plan Óptimo (Simplificada)
-    min_wr <- r_cl["WR_val"]
-    n_best <- n_cl; c_best <- c_cl
-    
-    # Optimización local (puedes reintegrar el GA aquí si prefieres)
-    for (n_test in 1:curr$N) {
-      for (c_test in 0:min(n_test-1, 20)) { # Límite de búsqueda en c para velocidad
-        r_test <- calc_wr(n_test, c_test, curr$N, curr$AQL, curr$LTPD, kp, kc)
-        if (r_test["WR_val"] < min_wr) {
-          min_wr <- r_test["WR_val"]
-          n_best <- n_test; c_best <- c_test
-        }
-      }
-    }
-    
-    res_escenario$n_opt[i] <- n_best
-    res_escenario$c_opt[i] <- c_best
-    res_escenario$WR_opt[i] <- min_wr
-    res_escenario$Ganancia[i] <- res_escenario$WR_cl[i] - min_wr
-  }
-  
-  # Guardar en la lista con un nombre identificador
-  nombre_lista <- paste0("N", curr$N, "_AQL", curr$AQL, "_a", curr$alpha)
-  lista_resultados[[nombre_lista]] <- res_escenario
-=======
 # Probabilidad de Aceptación (PA) - Curva CO tipo A (Hypergeométrica)
 Pa <- function(n, c, p, N){
   # Se utiliza phyper para la distribución hipergeométrica (muestreo sin reemplazo)
@@ -229,20 +120,20 @@ for (esce in cases) { # esce <- 1 + esce
   n_clasic <- plan_clasic$n
   c_clasic <- plan_clasic$c
   
-  n_ran <- 1:Esce[esce, 1]
-  c_ran <- 0:(max(n_ran) - 1)
-
-  b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
-  b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
-
-  plan_genetico <- ga(type = "binary", nBits = l1 + l2,
-                      fitness = fitness, popSize = 200,
-                      maxiter = 200, run = 100, seed = 060722)
-
-  plan_ga <- decode(plan_genetico@solution)
-
-  n_ga <- plan_ga[1]
-  c_ga <- plan_ga[2]
+  # n_ran <- 2:Esce[esce, 1]
+  # c_ran <- 0:(max(n_ran) - 1)
+  # 
+  # b1 <- decimal2binary(max(n_ran)); l1 <- length(b1)
+  # b2 <- decimal2binary(max(c_ran)); l2 <- length(b2)
+  # 
+  # plan_genetico <- ga(type = "binary", nBits = l1 + l2,
+  #                     fitness = fitness, popSize = 200,
+  #                     maxiter = 200, run = 100, seed = 060722)
+  # 
+  # plan_ga <- decode(plan_genetico@solution)
+  # 
+  # n_ga <- plan_ga[1]
+  # c_ga <- plan_ga[2]
   
   # 2. Obtener los pares de (alpha_b, beta_b) para la distribución Beta
   alpha_beta_params <- data.frame(alpha_b = rep(NA, length(p1)), beta_b = rep(NA, length(p1)))
@@ -254,17 +145,17 @@ for (esce in cases) { # esce <- 1 + esce
     alpha_beta_params[i, "alpha_b"] <- Shape$shape1
     alpha_beta_params[i, "beta_b"] <- Shape$shape2
   }
-  alpha_beta_params <- rbind(alpha_beta_params, c(1, 1), c(4.775, 75.553))
+  alpha_beta_params <- rbind(alpha_beta_params, c(1, 1))
   
   # 3. Inicializar la tabla de resultados
   resultados_riesgo <- data.frame(
     Escenario = 1:dim(alpha_beta_params)[1],
-    Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "Naive", "OTB_est"),# paste("otro", 1:(abs(5-length(p1))))),
+    Proveedor = c("Excelente", "Bueno", "Regular", "Malo", "Muy Malo", "Naive"),# paste("otro", 1:(abs(5-length(p1))))),
     n_clasic = n_clasic,
     c_clasic = c_clasic,
     
-    n_ga = NA, n_ga,
-    c_ga = NA, c_ga,
+    n_ga = NA, #n_ga,
+    c_ga = NA, #c_ga,
     
     P_Mass_Good_Beta = NA,                 # P(p < AQL | Beta)
     P_Mass_Bad_Beta = NA,                  # P(p > LTPD | Beta)
@@ -287,7 +178,7 @@ for (esce in cases) { # esce <- 1 + esce
   
   # 4. Iterar sobre los escenarios y calcular los riesgos
   
-  for (j in 1:dim(alpha_beta_params)[1]) { # j <-6 1 + j
+  for (j in 1:length(p1)) { # j <- 1 + j
     
     # Usar los valores calculados de alpha y beta específicos para el proveedor i
     alpha_b_val <- alpha_beta_params[j, "alpha_b"]
@@ -313,8 +204,14 @@ for (esce in cases) { # esce <- 1 + esce
     
     # --- III. Búsqueda del Plan Óptimo (Minimizar TWR Puro) para el Escenario i ---
     
-    dens_a <- dbeta(Esce[esce, 4], alpha_b_val, beta_b_val)
-    dens_b <- dbeta(Esce[esce, 5], alpha_b_val, beta_b_val)
+    quant_p_a <- qhyper((1 - Esce[esce, 2]), Esce[esce, 1] * Esce[esce, 4],
+                        Esce[esce, 1] * (1 - Esce[esce, 4]), n_clasic)/n_clasic
+    quant_p_b <- qhyper(Esce[esce, 3], Esce[esce, 1] * Esce[esce, 5],
+                        Esce[esce, 1] * (1 - Esce[esce, 5]), n_clasic)/n_clasic
+    
+    
+    dens_a <- dbeta(quant_p_a, alpha_b_val, beta_b_val)
+    dens_b <- dbeta(quant_p_b, alpha_b_val, beta_b_val)
     
     # Ancho para el riesgo del productor: AQL - 0
     # Ancho para el riesgo del consumidor: 1 - LTPD
@@ -388,5 +285,5 @@ for (esce in cases) { # esce <- 1 + esce
   # Guardar los parámetros de las densidades Beta calculadas para este escenario
   lista_parametros_beta[[esce]] <- alpha_beta_params
   
->>>>>>> 16a177554b09c394ca6f03b22b399b8fb6966908
-}
+} 
+
