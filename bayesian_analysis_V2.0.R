@@ -1,15 +1,13 @@
-#==============================================================================#
-#                   Script Consolidado de Inferencia Bayesiana MCMC          #
-#==============================================================================#
-
 # --- 0. Carga de Paquetes Necesarios ---
 # Instala los paquetes si no los tienes:
 # install.packages(c("readxl", "ggplot2", "readr", "tidyverse", "dplyr",
-#                    "stats", "boot", "coda", "matrixStats", "gridExtra"))
+#                    "stats", "boot", "coda", "matrixStats", "gridExtra",
+#                       "AcceptanceSampling"))
 
 # 1. Carga e instalación de paquetes ----
 lista_de_paquetes <- c("readxl", "ggplot2", "readr", "tidyverse", "dplyr",
-                       "stats", "boot", "coda", "matrixStats", "gridExtra")
+                       "stats", "boot", "coda", "matrixStats", "gridExtra",
+                       "AcceptanceSampling")
 # Simplificado a los esenciales para el mapa de calor
 
 for (paquete in lista_de_paquetes) {
@@ -22,19 +20,80 @@ for (paquete in lista_de_paquetes) {
 #==============================================================================#
 # --- 1. Definición de Datos y Cálculo de Parámetros Iniciales (Semilla) ---
 #==============================================================================#
-setwd("~/Thesis_job/Thesis_job")
-# Configura el directorio de trabajo (asegúrate de que sea la ruta correcta)
-# setwd("Thesis_job")
+setwd("~/Thesis_job")
 
-# Carga de datos
-# Los datos 'Defect' se asumen como proporciones o valores de una distribución Beta.
-# Asegúrate de que tu archivo "Acceptance Sampling MIL-STD 105E for Quality Control.xlsx"
-# esté en el directorio de trabajo o proporciona la ruta completa.
 data1_excel <- read_excel("Acceptance Sampling MIL-STD 105E for Quality Control.xlsx", sheet = "tab")
 data2_excel <- read_excel("Jurnal Rekavasi.xlsx", sheet = "tabla") # No usado en este script
 
+set.seed(060722)
+N <- 1000; n <- 83
+AQL <- 0.05; LTPD <- 0.10
+alpha_des <- 0.01; beta_des <- 0.05
+
+
+plan_kier <- find.plan(PRP = c(AQL, 1 - alpha_des),
+                       CRP = c(LTPD, beta_des),
+                       N = N, type = "hypergeom")
+
+p <- AQL
+
+# ... (Tu carga de paquetes y definición de plan_kier se mantiene igual)
+
+# 1. Inicialización correcta de vectores
+lotes <- 35
+sum_n <- numeric(lotes)  # Pre-alocación de memoria
+decis <- numeric(lotes)
+
+# Extraemos n y c del plan para facilitar la lectura
+n_sample <- plan_kier$n
+c_critico <- plan_kier$c
+
+for (k in 1:lotes) {
+  
+  # 2. Generación del lote (Población N)
+  # Creamos un lote donde la proporción de defectuosos es p = AQL
+  L <- ifelse(runif(N) <= p, 1, 0)
+  
+  # 3. Muestreo sin reemplazo
+  sample_n <- sample(L, n_sample)
+  
+  # 4. Conteo de defectuosos en la muestra k
+  sum_n[k] <- sum(sample_n)
+  
+  # 5. Lógica de decisión: Si defectuosos > c, se rechaza (1), si no se acepta (0)
+  # Corregido: Usamos sum_n[k] para evaluar solo el lote actual
+  decis[k] <- ifelse(sum_n[k] > c_critico, 1, 0)
+}
+
+# 6. Consolidación de resultados
+resultados <- data.frame(
+  Lote = 1:lotes, 
+  Defectuosos = sum_n, 
+  Rechazado = decis
+) %>%
+  mutate(p_est = Defectuosos / n_sample)
+
+print(head(resultados))
+# Visualización de la densidad de p_est
+plot(density(resultados$p_est), 
+     main = "Distribución de la Proporción de Defectos Simulada",
+     xlab = "Proporción (p_est)", 
+     ylab = "Densidad",
+     col = "blue", lwd = 2)
+
+# Añadimos una línea vertical en el AQL teórico para comparar
+abline(v = AQL, col = "red", lty = 2)
+
+
 # Extrae la columna 'Defect' como un vector numérico.
-xn <- data1_excel %>% dplyr::select(Defect) %>% pull()
+data1 <- data1_excel %>% dplyr::select(Defect) %>% pull()
+data2 <- data2_excel %>% dplyr::select(x) %>% pull()
+data3 <- resultados %>% dplyr::select(x) %>% pull()
+
+
+
+
+
 
 # Calcula los parámetros iniciales (alpha0, beta0) usando el método de los momentos
 # para la distribución Beta. Estos servirán como el punto de partida (semilla)
