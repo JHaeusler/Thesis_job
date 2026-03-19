@@ -1,4 +1,4 @@
-setwd("~/Thesis_job/Thesis_job")
+setwd("G:/Mi unidad/Trabajo de Investigación - JSH/TG_Maestría_Juan_Sebastián_Haeusler_Final_V_4_0/")
 
 N <- 1000
 prop <- seq(0, 1, 0.01)
@@ -12,7 +12,7 @@ for(n_ in 1:length(n)){
     
     # --- PASO 1: Definir nombre y abrir archivo ---
     # Creamos un nombre descriptivo: Ej: "CCO_n1_c0.png"
-    file_name <- paste0("OC_n", n_,".png")
+    file_name <- paste0("imagenes/OC_n", n_,".png")
     png(file_name, width = 800, height = 600, res = 100) 
     
   for (c_ in 0:(n_ - 1)) {
@@ -30,7 +30,7 @@ for(n_ in 1:length(n)){
     
     for (i in 0:c_) {
       Pa <- phyper(i, N*prop, N*(1 - prop), n_)
-      lines(prop, Pa, lty = 1, col = "lightskyblue4")
+      lines(prop, Pa, lwd=2, lty = 1, col = "lightskyblue4")
       
       if (i == 0) {
         # Zona ALPHA
@@ -51,21 +51,21 @@ for(n_ in 1:length(n)){
       x_pos <- 0.15 + 0.10*i
       y_pos <- phyper(i, N*x_pos, N*(1 - x_pos), n_)
       
-      text(x = x_pos, y = y_pos + 0.02, 
+      text(x = x_pos, y = y_pos + 0.02, cex = 1.4,
            labels = paste("c =", i), 
-           pos = 4, cex = 1.1, col = "lightskyblue4", font = 2)
+           pos = 4, col = "lightskyblue4", font = 2)
     }
     
     # Elementos fijos del gráfico
-    segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1, lty = 3, col = "burlywood4")
-    segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1, lty = 3, col = "burlywood4")
+    segments(x0= 0.05, y0= 0, x1= 0.05, y1= 1, lty = 3, col = "burlywood4", lwd = 1.5)
+    segments(x0= 0.10, y0= 0, x1= 0.10, y1= 1, lty = 3, col = "burlywood4", lwd = 1.5)
     abline(v= 0, h= c(0, 1), lty = 2, col = "darkgray")
     
     # Etiquetas de riesgo y parámetros
-    text(x= 0.05, y= -0.02, label= "AQL", cex = 1.1)
-    text(x= 0.10, y= -0.02, label= "LTPD", cex = 1.1)
-    text(x= 0.05, y= 1.02, label= "0.05", cex = 1.1)
-    text(x= 0.10, y= 1.02, label= "0.10", cex = 1.1)
+    text(x= 0.02, y= -0.02, label= "AQL", cex = 1.4)
+    text(x= 0.12, y= -0.02, label= "LTPD", cex = 1.4)
+    text(x= 0.02, y= 1.02, label= "0.05", cex = 1.4)
+    text(x= 0.12, y= 1.02, label= "0.10", cex = 1.4)
     text(x= 0.07, y= 0.97 - 0.02*c_, label= expression(alpha), cex = 1.5, col = rgb(0.5, 0, 0.5))
     text(x= 0.08, y= 0.4 - 0.02*c_, label= expression(beta), cex = 1.5, col = rgb(0, 0.5, 0))
     
@@ -91,8 +91,8 @@ n_kir <- plan$n
 c_kir <- plan$c
 
 # guardar archivo
-file_name <- paste0("OC_kiermeier.png")
-png(file_name, width = 800, height = 600, res = 100)
+file_name <- paste0("imagenes/OC_kiermeier.png")
+png(file_name, width = 900, height = 600, res = 100)
 
 plot(NULL, xlim = c(0, 0.2), ylim = c(0, 1.01), bty = "l", type = "n",
      xaxs = "i", yaxs = "i", ylab = expression(P[a]), xlab = expression(p),
@@ -102,6 +102,7 @@ plot(NULL, xlim = c(0, 0.2), ylim = c(0, 1.01), bty = "l", type = "n",
      cex.main = 1.5,   
      cex.lab = 1.5,    
      cex.axis = 1.5)
+
 lines(c(0,AQL), rep(1 - alpha, 2), lty = 2, col = "gray")
 lines(rep(AQL,2), c(1 - alpha, 0), lty = 2, col = "gray")
 lines(c(0,LTPD), rep(beta,2), lty = 2, col = "gray")
@@ -125,14 +126,16 @@ brackets(x1 = LTPD, y1 = beta,
          ticks = 0.5, curvature = 0.5, type = 1, 
          col = rgb(0, 0.5, 0), lwd = 2)
 
-text(AQL - 0.025, 1 - alpha - 0.04, cex = 1.1,
+text(AQL - 0.025, 1 - alpha - 0.04, cex = 1.5,
      labels = expression(paste("(", AQL, ", ", 1 - alpha, ")")), pos = 4)
      
-text(LTPD, beta + 0.02, cex = 1.1,
+text(LTPD, beta + 0.02, cex = 1.5,
      labels = expression(paste("(", LTPD, ", ", beta, ")")), pos = 4)
-text(x= AQL + 0.008, y= 0.97, label= expression(alpha), cex = 1, col = rgb(0.5, 0, 0.5))
-text(x= LTPD - 0.008, y= 0.03, label= expression(beta), cex = 1, col = rgb(0, 0.5, 0))
+text(x= AQL + 0.008, y= 0.97, label= expression(alpha),
+     cex = 2, col = rgb(0.5, 0, 0.5))
+text(x= LTPD - 0.008, y= 0.03, label= expression(beta),
+     cex = 2, col = rgb(0, 0.5, 0))
 segments(x0= AQL, y0= 0.95, x1= AQL, y1= 1, lty = 3, col = rgb(0.5, 0, 0.5), lwd = 3)
-segments(x0= 0, y0= 1, x1= AQL, y1= 1, lty = 2, col = "gray")
+segments(x0= 0, y0= 1, x1= AQL, y1= 1, lty = 2, col = "gray", lwd = 1.5)
 
 dev.off()

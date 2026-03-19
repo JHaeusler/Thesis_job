@@ -1,13 +1,7 @@
-# --- 0. Carga de Paquetes Necesarios ---
-# Instala los paquetes si no los tienes:
-# install.packages(c("readxl", "ggplot2", "readr", "tidyverse", "dplyr",
-#                    "stats", "boot", "coda", "matrixStats", "gridExtra",
-#                       "AcceptanceSampling"))
-
 # 1. Carga e instalación de paquetes ----
 lista_de_paquetes <- c("readxl", "ggplot2", "readr", "tidyverse", "dplyr",
                        "stats", "boot", "coda", "matrixStats", "gridExtra",
-                       "AcceptanceSampling")
+                       "AcceptanceSampling", "GA")
 # Simplificado a los esenciales para el mapa de calor
 
 for (paquete in lista_de_paquetes) {
@@ -22,22 +16,35 @@ for (paquete in lista_de_paquetes) {
 #==============================================================================#
 setwd("~/Thesis_job")
 
+# Fuente 1: Acceptance Sampling MIL-STD 105E for Quality Control: A Case Study
+# Deadila Defiatri and Retno Wulan Damayanti1
+# Industrial Engineering Dept. Sebelas Maret University, Surakarta, Indonesia
+# E3S Web of Conferences 465, 02043 (2023)
+
 data1_excel <- read_excel("Acceptance Sampling MIL-STD 105E for Quality Control.xlsx", sheet = "tab")
+
+# Fuente 2: USULAN PENERAPAN METODE ACCEPTANCE SAMPLING MIL-STD 105E DAN
+# PENENTUAN PROSES CAPABILITY UNTUK PENGENDALIAN KUALITAS BAHAN BAKU
+# KERUPUK IKAN TENGIRI
+# Fajar Isnanto, Endang Widuri Asih, Joko Susetyo
+# Jurusan Teknik Industri
+# Fakultas Teknologi Industri, Institut Sains & Teknologi AKPRIND Yogyakarta
+# Jl. Kalisahak 28 Yogyakarta
+# E-mail: Fajarisnanto09@gmail.com, endang.akprind@gmail.com, joko_sty@akprind.ac.id
+# Jurnal REKAVASI, Vol. 7, No. 1, Mei 2019, 25-32
 data2_excel <- read_excel("Jurnal Rekavasi.xlsx", sheet = "tabla") # No usado en este script
 
+# Simulación Propia
 set.seed(060722)
-N <- 1000; n <- 83
+N <- 1000
 AQL <- 0.05; LTPD <- 0.10
 alpha_des <- 0.01; beta_des <- 0.05
-
 
 plan_kier <- find.plan(PRP = c(AQL, 1 - alpha_des),
                        CRP = c(LTPD, beta_des),
                        N = N, type = "hypergeom")
 
-p <- AQL
-
-# ... (Tu carga de paquetes y definición de plan_kier se mantiene igual)
+p_param <- AQL
 
 # 1. Inicialización correcta de vectores
 lotes <- 35
@@ -52,7 +59,7 @@ for (k in 1:lotes) {
   
   # 2. Generación del lote (Población N)
   # Creamos un lote donde la proporción de defectuosos es p = AQL
-  L <- ifelse(runif(N) <= p, 1, 0)
+  L <- ifelse(runif(N) <= p_param, 1, 0)
   
   # 3. Muestreo sin reemplazo
   sample_n <- sample(L, n_sample)
@@ -74,46 +81,55 @@ resultados <- data.frame(
   mutate(p_est = Defectuosos / n_sample)
 
 print(head(resultados))
+
+# Extrae la columna 'Defect' como un vector numérico.
+data1 <- data1_excel %>% select(Defect) %>% pull()
+data2 <- data2_excel %>% select(p) %>% pull()
+data3 <- resultados %>% select(p_est) %>% pull()
+
 # Visualización de la densidad de p_est
-plot(density(resultados$p_est), 
+plot(density(data3), xlim = c(0, 1), 
      main = "Distribución de la Proporción de Defectos Simulada",
      xlab = "Proporción (p_est)", 
      ylab = "Densidad",
      col = "blue", lwd = 2)
 
+lines(density(data2), col = "red")
+lines(density(data1), col = "green")
 # Añadimos una línea vertical en el AQL teórico para comparar
 abline(v = AQL, col = "red", lty = 2)
-
-
-# Extrae la columna 'Defect' como un vector numérico.
-data1 <- data1_excel %>% dplyr::select(Defect) %>% pull()
-data2 <- data2_excel %>% dplyr::select(x) %>% pull()
-data3 <- resultados %>% dplyr::select(x) %>% pull()
-
-
-
-
-
+legend()
 
 # Calcula los parámetros iniciales (alpha0, beta0) usando el método de los momentos
 # para la distribución Beta. Estos servirán como el punto de partida (semilla)
 # para la cadena de Markov de MCMC.
+
+# xn <- data1
+# xn <- data2
+# xn <- data2
+
+
+T_T_B_MCMC <- function(data){
+
+xn <- data
+    
 mean_xn <- mean(xn)
 var_xn <- var(xn)
 
-alpha0 <- mean_xn * (mean_xn * (1 - mean_xn) / var_xn - 1)
-beta0 <- (1 - mean_xn) * (mean_xn * (1 - mean_xn) / var_xn - 1)
+# metodo de momentos 
+a_0 <- mean_xn * (mean_xn * (1 - mean_xn) / var_xn - 1)
+b_0 <- (1 - mean_xn) * (mean_xn * (1 - mean_xn) / var_xn - 1)
 
 # Valida que los parámetros iniciales sean positivos para evitar errores de logaritmo.
 # Si son no positivos, se ajustan a un valor pequeño y se emite una advertencia.
-if (alpha0 <= 0 || beta0 <= 0) {
-  warning("Los valores iniciales calculados (alpha0 o beta0) son no positivos. Ajustando a un valor mínimo.")
-  alpha0 <- max(alpha0, 0.001)
-  beta0 <- max(beta0, 0.001)
+if (a_0 <= 0 || b_0 <= 0) {
+  warning("Los valores iniciales calculados (a_0 o b_0) son no positivos. Ajustando a un valor mínimo.")
+  a_0 <- max(a_0, 0.001)
+  b_0 <- max(b_0, 0.001)
 }
 
 # Define el punto inicial de la cadena MCMC (x0)
-x0 <- c(alpha0, beta0)
+theta_0 <- c(a_0, b_0)
 
 #==============================================================================#
 # --- 2. Definición de Funciones de Propuesta (Instrumental Distribution) ---
@@ -131,11 +147,11 @@ proposal_sampler <- function(y) {
   mu2 <- if (y[2] > 0) log(y[2]) else log(0.0001)
   
   # Genera una nueva propuesta de Alpha y Beta usando la distribución Log-Normal.
-  alpha_proposed <- rlnorm(1, meanlog = mu1, sdlog = sigma1)
-  beta_proposed <- rlnorm(1, meanlog = mu2, sdlog = sigma2)
+  a_proposed <- rlnorm(1, meanlog = mu1, sdlog = sigma1)
+  b_proposed <- rlnorm(1, meanlog = mu2, sdlog = sigma2)
   
   # Retorna la propuesta como un vector.
-  return(c(alpha_proposed, beta_proposed))
+  return(c(a_proposed, b_proposed))
 }
 
 # proposal_log_pdf: Calcula el logaritmo de la densidad de probabilidad de la propuesta.
@@ -162,15 +178,15 @@ proposal_log_pdf <- function(y, z) {
 # target_log_pdf: Log-densidad posterior con priors Gamma para Alpha y Beta.
 # Esta es la función objetivo que el MCMC intentará muestrear.
 target_log_pdf <- function(current_params, x_data, prior_hyperparams) {
-  alpha <- current_params[1]
-  beta <- current_params[2]
-  a <- prior_hyperparams[1] # shape para Alpha
-  b <- prior_hyperparams[2] # rate para Alpha
-  c <- prior_hyperparams[3] # shape para Beta
-  d <- prior_hyperparams[4] # rate para Beta
+  a_0 <- current_params[1]
+  b_0 <- current_params[2]
+  a_prop <- prior_hyperparams[1] # shape para Alpha
+  b_prop <- prior_hyperparams[2] # rate para Alpha
+  c_prop <- prior_hyperparams[3] # shape para Beta
+  d_prop <- prior_hyperparams[4] # rate para Beta
   
   # Penalización si los parámetros no son válidos (Alpha o Beta <= 0).
-  if (alpha <= 0 || beta <= 0) {
+  if (a_0 <= 0 || b_0 <= 0) {
     return(-Inf)
   }
   
@@ -178,14 +194,14 @@ target_log_pdf <- function(current_params, x_data, prior_hyperparams) {
   
   # Log-verosimilitud para datos que siguen una distribución Beta.
   # 'lgamma' es el logaritmo de la función Gamma.
-  log_beta_ratio <- n * (lgamma(alpha + beta) - lgamma(alpha) - lgamma(beta))
-  log_likelihood_data_terms <- (alpha - 1) * sum(log(x_data)) + (beta - 1) * sum(log(1 - x_data))
+  log_beta_ratio <- n * (lgamma(a_0 + b_0) - lgamma(a_0) - lgamma(b_0))
+  log_likelihood_data_terms <- (a_0 - 1) * sum(log(x_data)) + (b_0 - 1) * sum(log(1 - x_data))
   log_likelihood <- log_beta_ratio + log_likelihood_data_terms
   
   # Log-priors Gamma para Alpha y Beta.
-  log_prior_alpha <- dgamma(alpha, shape = a, rate = b, log = TRUE)
-  log_prior_beta <- dgamma(beta, shape = c, rate = d, log = TRUE)
-  log_prior <- log_prior_alpha + log_prior_beta
+  log_prior_a_0 <- dgamma(a_0, shape = a, rate = b, log = TRUE)
+  log_prior_b_0 <- dgamma(b_0, shape = c, rate = d, log = TRUE)
+  log_prior <- log_prior_a_0 + log_prior_b_0
   
   # Log-densidad posterior total (verosimilitud + priors).
   log_posterior_density <- log_likelihood + log_prior
@@ -195,20 +211,20 @@ target_log_pdf <- function(current_params, x_data, prior_hyperparams) {
 # target_log_pdf_jeffrey: Log-densidad posterior con Prior de Jeffreys.
 # Utiliza la prior de Jeffreys para los parámetros de la distribución Beta.
 target_log_pdf_jeffrey <- function(current_params, x_data, prior_hyperparams = NULL) {
-  alpha <- current_params[1]
-  beta <- current_params[2]
+  a_0 <- current_params[1]
+  b_0 <- current_params[2]
   
   # Penalización si los parámetros no son válidos.
-  if (alpha <= 0 || beta <= 0) {
+  if (a_0 <= 0 || b_0 <= 0) {
     return(-Inf)
   }
   
   # Cálculo de la Prior de Jeffreys usando la función Polygamma.
   # psigamma(x, deriv=1) es la primera derivada de la función digamma (trigamma).
-  psi_alpha <- psigamma(alpha, deriv = 1)
-  psi_beta <- psigamma(beta, deriv = 1)
-  psi_alpha_beta <- psigamma(alpha + beta, deriv = 1)
-  prior_term_inside_sqrt <- psi_alpha * psi_beta - (psi_alpha + psi_beta) * psi_alpha_beta
+  psi_a_0 <- psigamma(a_0, deriv = 1)
+  psi_b_0 <- psigamma(b_0, deriv = 1)
+  psi_a_0_b_0 <- psigamma(a_0 + b_0, deriv = 1)
+  prior_term_inside_sqrt <- psi_a_0 * psi_b_0 - (psi_a_0 + psi_b_0) * psi_a_0_b_0
   
   # Penaliza si el término dentro de la raíz cuadrada es no positivo.
   if (prior_term_inside_sqrt <= 0) {
@@ -218,8 +234,8 @@ target_log_pdf_jeffrey <- function(current_params, x_data, prior_hyperparams = N
   
   # Log-verosimilitud (misma que en target_log_pdf).
   n <- length(x_data)
-  log_beta_ratio <- n * (lgamma(alpha + beta) - lgamma(alpha) - lgamma(beta))
-  log_likelihood_data_terms <- (alpha - 1) * sum(log(x_data)) + (beta - 1) * sum(log(1 - x_data))
+  log_beta_ratio <- n * (lgamma(a_0 + b_0) - lgamma(a_0) - lgamma(b_0))
+  log_likelihood_data_terms <- (a_0 - 1) * sum(log(x_data)) + (b_0 - 1) * sum(log(1 - x_data))
   log_likelihood <- log_beta_ratio + log_likelihood_data_terms
   
   # Log-densidad posterior total (verosimilitud + prior de Jeffreys).
@@ -388,7 +404,7 @@ Measure_Diagnostic <- function(data1, data2, burnin=0, thin=1, digits=5, cred_le
   
   return(list("Numerical" = Numerical_results_vertical))
 }
-
+}
 #==============================================================================#
 # --- 6. Monitoreo de Convergencia (Visualizaciones) ---
 #==============================================================================#
