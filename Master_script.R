@@ -5,53 +5,13 @@ rm(list = ls())
 setwd("~/Thesis_job") 
 
 # --- 0. CARGA GLOBAL DE PAQUETES ---
-paquetes <- c("readxl", "readr", "dplyr", "stats", "boot", "coda", "matrixStats", 
-              "AcceptanceSampling", "sjstats", "tidyr", "pracma", "coda")
+paquetes <- c("readxl", "readr", "dplyr", "stats", "boot",
+              "coda", "matrixStats", "AcceptanceSampling",
+              "sjstats", "tidyr", "pracma")
 for (p in paquetes) {
   if(!require(p, character.only = TRUE)){
     install.packages(p); require(p, character.only = TRUE)
   }
-}
-
-# Probabilidad de Aceptación (PA) - Curva CO tipo A (Hypergeométrica)
-Pa <- function(n, c, p, N){
-  # Se utiliza phyper para la distribución hipergeométrica (muestreo sin reemplazo)
-  Pa_val <- phyper(c, N * p, N * (1 - p), n)
-  return(Pa_val)
-}
-
-# Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
-# Error tipo I (Rechazar lote bueno): p en [0, AQL]
-rap_p <- function(p, n, c, a_b, b_b, N_){
-  f.p <- dbeta(p, a_b, b_b) # Densidad del historico de calidad
-  rap_p_ <- (1 - Pa(n, c, p, N)) * f.p
-  return(rap_p_)
-}
-
-# Integrando el Riesgo del Consumidor (RC): PA * f(p)
-# Error tipo II (Aceptar lote malo): p en [LTPD, 1]
-rap_c <- function(p, n, c, a_b, b_b, N_){
-  f.p <- dbeta(p, a_b, b_b) # Densidad a priori Beta
-  rap_c_r <- Pa(n, c, p, N) * f.p
-  return(rap_c_r)
-}
-
-# Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
-dens_acum <- function(a_b, b_b, AQL, LTPD) {
-  P_acum_Good <- pbeta(AQL, shape1 = a_b, shape2 = b_b)
-  P_acum_Bad <- 1 - pbeta(LTPD, shape1 = a_b, shape2 = b_b)
-  return(c(PA_Good = P_acum_Good, PA_Bad = P_acum_Bad))
-}
-
-# Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
-calc_rap <- function(N_, n, c, a_b, b_b, AQL, LTPD, w_p, w_c) {
-  
-  rap_p_val <- integral(f = function(p) rap_p(p, n, c, a_b, b_b, N_), xmin = 0, xmax = AQL, method = "Kron")
-  rap_c_val <- integral(f = function(p) rap_c(p, n, c, a_b, b_b, N_), xmin = LTPD, xmax = 1, method = "Kron")
-  rap_t_val <- w_p * rap_p_val + w_c * rap_c_val
-  
-  # CORRECCIÓN AQUÍ: Se retornan las variables correctas
-  return(c(RAP_p_val = rap_p_val, RAP_c_val = rap_c_val, RAP_t_val = rap_t_val)) 
 }
 
 # --- 1. INTERRUPTORES LÓGICOS ---
