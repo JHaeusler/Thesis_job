@@ -1,0 +1,105 @@
+# 1. Instalar y cargar librerías necesarias
+if (!require("httr")) install.packages("httr")
+if (!require("ggplot2")) install.packages("ggplot2")
+
+# library(tydiverse)
+library(httr)
+library(ggplot2)
+
+# Tus credenciales de Kaggle (Mantenlas seguras)
+kaggle_user <- "jshaeusler"
+kaggle_key <- "KGAT_eaafd1928178f139d310b6755cbde2da"
+
+# AJUSTE 1: Nuevo identificador del dataset (extraído de la URL)
+dataset_slug <- "shaistashahid/freelancer-income-vs-skills"
+
+# Construir la URL de descarga de la API
+url <- paste0("https://www.kaggle.com/api/v1/datasets/download/", dataset_slug)
+
+# Realizar la petición segura
+respuesta <- GET(url, authenticate(kaggle_user, kaggle_key, type = "basic"))
+
+# Verificar si la descarga fue exitosa
+if (status_code(respuesta) == 200) {
+  temp <- tempfile(fileext = ".zip")
+  writeBin(content(respuesta, "raw"), temp)
+  
+  archivos_en_zip <- unzip(temp, list = TRUE)
+  # Se lee el primer archivo CSV contenido en el ZIP de freelancers
+  datos_freelancer <- read.csv(unzip(temp, archivos_en_zip$Name[1]))
+  
+  message("¡Éxito! Dataset de Freelancers cargado correctamente.")
+} else {
+  stop("Error en la descarga. Revisa tus credenciales o el slug del dataset.")
+}
+
+str(datos_freelancer)
+# Código para limpiar el ingreso anual y volverlo numérico
+datos_freelancer$annual_income_usd <- as.numeric(gsub("[\\$,]", "", datos_freelancer$annual_income_usd))
+
+# AJUSTE 1: Nuevo identificador del dataset (extraído de la URL)
+dataset_slug2 <- "shohinurpervezshohan/freelancer-earnings-and-job-trends"
+
+# Construir la URL de descarga de la API
+url2 <- paste0("https://www.kaggle.com/api/v1/datasets/download/", dataset_slug2)
+
+# Realizar la petición segura
+respuesta2 <- GET(url2, authenticate(kaggle_user, kaggle_key, type = "basic"))
+
+# Verificar si la descarga fue exitosa
+if (status_code(respuesta2) == 200) {
+  temp <- tempfile(fileext = ".zip")
+  writeBin(content(respuesta2, "raw"), temp)
+  
+  archivos_en_zip <- unzip(temp, list = TRUE)
+  # Se lee el primer archivo CSV contenido en el ZIP de freelancers
+  datos_freelancer_2 <- read.csv(unzip(temp, archivos_en_zip$Name[1]))
+  
+  message("¡Éxito! Dataset de Freelancers cargado correctamente.")
+} else {
+  stop("Error en la descarga. Revisa tus credenciales o el slug del dataset.")
+}
+
+str(datos_freelancer)
+
+
+modelo2 <- lm(years_experience ~ hourly_rate_usd, data=datos_freelancer)
+summary(modelo2)
+
+
+unique(datos_freelancer$category )
+
+
+## muestreo
+## MAS
+n <- 78
+k <- 3300 # número de muestras tomadas
+p_hat <- numeric(k)
+
+for(i in 1:k){ # k <- 1  + k
+muestra1 <- datos_freelancer[sample(1:nrow(datos_freelancer), n), ]
+
+p_hat[i] <- as.numeric(muestra1 %>% filter(category == "Full Stack") %>% 
+  summarise(n = n()))/n
+
+}
+
+boxplot(p_hat)
+
+str(datos_freelancer)
+
+### variable tasa promedio en dolares
+
+boxplot(muestra1$hourly_rate_usd)
+
+boxplot(muestra1$hourly_rate_usd ~ muestra1$category)
+
+x_bar <- numeric(k)
+
+for(j in 1:k){ # k <- 1  + k
+  muestra1 <- datos_freelancer[sample(1:nrow(datos_freelancer), n), ]
+  
+  x_bar[j] <- mean(muestra1$hourly_rate_usd)
+  
+}
+
