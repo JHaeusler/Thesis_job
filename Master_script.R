@@ -1,76 +1,174 @@
 # ============================================================================== #
 # PANEL DE CONTROL MAESTRO - DISEÑO ADAPTATIVO DE PLANES DE MUESTREO (SOMA)
-# Autor: Juan Sebastián Haeusler
-# Tesis de Maestría - Optimización Bayesiana de Calidad
 # ============================================================================== #
 
-# Limpiar el entorno de trabajo (Solo se hace aquí en el Master)
+# Obtiene la ruta exacta de este archivo y la fija como directorio de trabajo
+# directorio_actual <- dirname(rstudioapi::getActiveDocumentContext()$path)
+# setwd(directorio_actual)
+
 rm(list = ls())
+setwd("~/Thesis_job")
 
-# --- 1. CONFIGURACIÓN DEL USUARIO (PANEL DE CONTROL) ---
-setwd("~/Thesis_job") 
-
-# A. Selección MÚLTIPLE de Fuentes de Datos Empíricos para el MCMC
-# 1 = Defiatri & Damayanti (2023)
-# 2 = Isnanto et al. (2019)
-# 3 = Simulación Estocástica Propia
-# ¡El usuario puede colocar c(1), c(1,2) o c(1,2,3)!
-FUENTES_ACTIVAS <- c(1, 2, 3) 
-
-# B. Parámetros del Lote y Malla de Escenarios a evaluar
-N_vec     <- 1000                      
-alpha_vec <- c(0.01, 0.05)             
-beta_vec  <- c(0.05, 0.10, 0.20)       
-AQL_vec   <- c(0.01, 0.02, 0.05)       
-LTPD_vec  <- c(0.08, 0.10, 0.15, 0.20) 
-
-# Homologación de variables para los scripts esclavos
-N <- N_vec; alpha <- alpha_vec; beta <- beta_vec; AQL <- AQL_vec; LTPD <- LTPD_vec
-
-cat("=================================================================\n")
-cat(" INICIANDO SISTEMA DE OPTIMIZACIÓN DE MUESTREO ADAPTATIVO (SOMA)\n")
-cat("=================================================================\n\n")
-
-# --- 2. ELICITACIÓN DE EXPERTOS (Módulo Independiente de los Datos) ---
-cat(">> EJECUTANDO ELICITACIÓN DE EXPERTOS (elicit_cook_2010.R)...\n")
-# Corre 1 sola vez porque la grilla AQL/LTPD es la misma para todas las fuentes
-source("elicit_cook_2010.R", encoding = "UTF-8")
-cat(">> ELICITACIÓN COMPLETADA Y ATLAS PDF GENERADO.\n\n")
-
-# --- 3. BUCLE DE ANÁLISIS POR FUENTE DE DATOS ---
-# Lista maestra que guardará los planes óptimos de todos los proveedores
-ANALISIS_GLOBAL <- list()
-
-for(fuente in FUENTES_ACTIVAS) {
-  
-  # La variable FUENTE_ACTIVA informará al MCMC qué Excel debe cargar
-  FUENTE_ACTIVA <- fuente 
-  
-  cat(sprintf("\n#################################################################\n"))
-  cat(sprintf("   PROCESANDO FUENTE DE DATOS: %d\n", FUENTE_ACTIVA))
-  cat(sprintf("#################################################################\n"))
-  
-  # MÓDULO I: Estimación Bayesiana (MCMC) para la fuente actual
-  cat("\n>> FASE I: ESTIMACIÓN ESTOCÁSTICA (MCMC_TTB.R)...\n")
-  source("MCMC_TTB.R", encoding = "UTF-8")
-  
-  # MÓDULO II: Búsqueda del Plan Óptimo (RAP) para la fuente actual
-  cat("\n>> FASE II: BÚSQUEDA DETERMINÍSTICA RAP (RAP_SSP_adaptative.R)...\n")
-  source("RAP_SSP_adaptative.R", encoding = "UTF-8")
-  
-  # Guardar los resultados de los escenarios de esta fuente específica
-  nombre_lista <- paste0("Fuente_Datos_", FUENTE_ACTIVA)
-  ANALISIS_GLOBAL[[nombre_lista]] <- lista_tablas_resultados
-  
-  cat(sprintf("\n>> Análisis de la Fuente %d guardado exitosamente.\n", FUENTE_ACTIVA))
+# --- 0. CARGA GLOBAL DE PAQUETES ---
+paquetes <- c("readxl", "readr", "dplyr", "stats", "boot", "coda", "matrixStats", 
+              "AcceptanceSampling", "sjstats", "tidyr", "pracma", "coda", "doParallel",
+              "foreach", "here")
+for (p in paquetes) {
+  if(!require(p, character.only = TRUE)){
+    install.packages(p); require(p, character.only = TRUE)
+  }
 }
 
+# Probabilidad de Aceptación (PA) - Curva CO tipo A (Hypergeométrica)
+Pa <- function(n, c, p, N){
+  # Se utiliza phyper para la distribución hipergeométrica (muestreo sin reemplazo)
+  Pa_val <- phyper(c, N * p, N * (1 - p), n)
+  return(Pa_val)
+}
+
+# Integrando el Riesgo del Productor (RP): (1 - PA) * f(p)
+# Error tipo I (Rechazar lote bueno): p en [0, AQL]
+rap_p <- function(p, n, c, a_b, b_b, N_){
+  f.p <- dbeta(p, a_b, b_b) # Densidad del historico de calidad
+  rap_p_ <- (1 - Pa(n, c, p, N_)) * f.p
+  return(rap_p_)
+}
+
+# Integrando el Riesgo del Consumidor (RC): PA * f(p)
+# Error tipo II (Aceptar lote malo): p en [LTPD, 1]
+rap_c <- function(p, n, c, a_b, b_b, N_){
+  f.p <- dbeta(p, a_b, b_b) # Densidad a priori Beta
+  rap_c_r <- Pa(n, c, p, N_) * f.p
+  return(rap_c_r)
+}
+
+# Función para calcular la masa de probabilidad (densidad acumulada) en las regiones de riesgo
+dens_acum <- function(a_b, b_b, AQL, LTPD) {
+  P_acum_Good <- pbeta(AQL, shape1 = a_b, shape2 = b_b)
+  P_acum_Bad <- 1 - pbeta(LTPD, shape1 = a_b, shape2 = b_b)
+  return(c(PA_Good = P_acum_Good, PA_Bad = P_acum_Bad))
+}
+
+# Función principal para calcular el Riesgo Ponderado Integrado (RP y RC)
+calc_rap <- function(N_, n, c, a_b, b_b, AQL, LTPD, w_p, w_c) {
+  
+  rap_p_val <- integral(f = function(p) rap_p(p, n, c, a_b, b_b, N_), xmin = 0, xmax = AQL, method = "Kron")
+  rap_c_val <- integral(f = function(p) rap_c(p, n, c, a_b, b_b, N_), xmin = LTPD, xmax = 1, method = "Kron")
+  rap_t_val <- rap_p_val + rap_c_val
+  
+  # CORRECCIÓN AQUÍ: Se retornan las variables correctas
+  return(c(RAP_p_val = rap_p_val, RAP_c_val = rap_c_val, RAP_t_val = rap_t_val)) 
+}
+
+# --- 1. INTERRUPTORES LÓGICOS ---
+EJECUTAR_OBJETIVO_1 <- TRUE   
+EJECUTAR_OBJETIVO_2 <- FALSE  
+GENERAR_FIGURAS     <- FALSE   
+
+FUENTES_ACTIVAS <- c(1, 2, 3)
+
+# --- 2. CARGA DE DATOS EMPÍRICOS ESTÁTICOS (FUENTES 1 Y 2) ---
+data1_excel <- read_excel("Acceptance Sampling MIL-STD 105E for Quality Control.xlsx", sheet = "tab")
+vec_data1 <<- data1_excel %>% select(Defect) %>% pull()
+
+data2_excel <- read_excel("Jurnal Rekavasi.xlsx", sheet = "tabla")
+vec_data2 <<- data2_excel %>% select(p) %>% pull()
+
+# --- 3. PREÁMBULO: MALLA CONTRACTUAL Y SIMULACIÓN (FUENTE 3) ---
+cat("\n>>> Inicializando Malla de Escenarios y Simulando Data 3...\n")
+
+# 3.1 Crear Malla Base
+Esce_Global <- expand.grid(N = 1000, alpha = c(0.01, 0.05), beta = c(0.05, 0.10, 0.20), 
+                           AQL = c(0.01, 0.02, 0.05), LTPD = c(0.08, 0.10, 0.15, 0.20))
+Esce_Global <- Esce_Global[Esce_Global$AQL < Esce_Global$LTPD, ]
+rownames(Esce_Global) <- NULL
+
+# 3.2 Adicionar columnas para el plan clásico (Kiermeier)
+Esce_Global$n_clasico <- NA
+Esce_Global$c_clasico <- NA
+
+# 3.3 Crear Matriz para la simulación (Filas = Escenarios, Columnas = 35 Lotes)
+lotes <- 35
+Matriz_Data3 <<- matrix(NA, nrow = nrow(Esce_Global), ncol = lotes)
+rownames(Matriz_Data3) <- paste0("Esce_", 1:nrow(Esce_Global))
+colnames(Matriz_Data3) <- paste0("Lote_", 1:lotes)
+
+# 3.4 Llenar las tablas
+set.seed(060722)
+for (k in 1:nrow(Esce_Global)) {
+  
+  # Calcular n y c para el escenario k
+  plan_kier <- find.plan(PRP = c(Esce_Global$AQL[k], 1 - Esce_Global$alpha[k]), 
+                         CRP = c(Esce_Global$LTPD[k], Esce_Global$beta[k]), 
+                         N = Esce_Global$N[k], type = "hypergeom")
+  
+  Esce_Global$n_clasico[k] <- plan_kier$n
+  Esce_Global$c_clasico[k] <- plan_kier$c
+  
+  # Simular los 35 lotes
+  sum_n <- numeric(lotes)
+  for (l in 1:lotes) {
+    sample_n <- sample(ifelse(runif(Esce_Global$N[k]) <= Esce_Global$AQL[k], 1, 0), plan_kier$n)
+    sum_n[l] <- sum(sample_n)
+  }
+  
+  # Guardar proporciones estimadas directamente en la fila k de la matriz
+  Matriz_Data3[k, ] <- sum_n / plan_kier$n
+}
+
+# 3.5 Identificación de Escenarios Extremos para Simulación (Prov 3A y 3B)
+cat(">>> Identificando escenarios de simulación extremos...\n")
+
+Malla_Extremos <- Esce_Global %>% 
+  mutate(id_escenario = row_number(),
+         dif = LTPD - AQL)
+
+# Prov 3A: Menor esfuerzo muestral
+prov3_A <- Malla_Extremos %>% 
+  arrange(n_clasico, c_clasico, dif) %>% 
+  slice(1) 
+
+# Prov 3B: Mayor esfuerzo muestral
+prov3_B <- Malla_Extremos %>% 
+  arrange(desc(n_clasico), desc(c_clasico), dif) %>% 
+  slice(1) 
+
+# Guardar los IDs en el entorno global para que los otros scripts los vean
+idx_min <<- prov3_A$id_escenario
+idx_max <<- prov3_B$id_escenario
+
+cat(sprintf("    - Prov 3A (Mínimo): Escenario %d (n = %d, c = %d)\n", idx_min, prov3_A$n_clasico, prov3_A$c_clasico))
+cat(sprintf("    - Prov 3B (Máximo): Escenario %d (n = %d, c = %d)\n", idx_max, prov3_B$n_clasico, prov3_B$c_clasico))
+
+# Exportar Esce_Global al entorno global
+Esce_Global <<- Esce_Global
+
+cat(sprintf(">>> Preámbulo completado. Esce_Global (%d filas) y Matriz_Data3 listas en memoria.\n", nrow(Esce_Global)))
+
 # ============================================================================== #
-# --- 4. CONSOLIDACIÓN FINAL ---
+# A PARTIR DE AQUÍ VENDRÁN LOS LLAMADOS A LOS DEMÁS SCRIPTS (source...)
 # ============================================================================== #
-cat("\n=================================================================\n")
-cat(" PROCESO BATCH FINALIZADO CON ÉXITO\n")
-cat("=================================================================\n")
-cat("Puede explorar el objeto 'ANALISIS_GLOBAL' en su entorno de RStudio\n")
-cat("para comparar cómo varían los tamaños de muestra (n) óptimos según\n")
-cat("el comportamiento histórico de cada empresa.\n")
+
+# --- 4. OBJETIVO 1: ELICITACIÓN Y EXTRACCIÓN ---
+if (EJECUTAR_OBJETIVO_1) {
+  cat("\n=================================================================\n")
+  cat(" OBJETIVO 1A: DICCIONARIO COOK (2010)\n")
+  cat("=================================================================\n")
+  source("elicit_cook_2010.R", encoding = "UTF-8")
+  
+  cat("\n=================================================================\n")
+  cat(" OBJETIVO 1B: EXTRACCIÓN EMPÍRICA MCMC\n")
+  cat("=================================================================\n")
+  diccionario_empirico <<- data.frame()
+  source("MCMC_TTB.R", encoding = "UTF-8")
+  
+  if (GENERAR_FIGURAS) source("generar_atlas_figuras.R", encoding = "UTF-8")
+}
+
+# --- 5. OBJETIVO 2: BÚSQUEDA DEL PLAN ÓPTIMO (RAP) ---
+if (EJECUTAR_OBJETIVO_2) {
+  cat("\n=================================================================\n")
+  cat(" OBJETIVO 2: BÚSQUEDA DETERMINÍSTICA RAP\n")
+  cat("=================================================================\n")
+  source(here("ASSP.R"), encoding = "UTF-8")
+}
