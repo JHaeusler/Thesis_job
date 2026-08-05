@@ -34,30 +34,10 @@ beta_des = c(0.05, 0.10, 0.20)
 AQL = c(0.01, 0.02, 0.05)
 LTPD = c(0.08, 0.10, 0.15, 0.20)
 
-# 3.1 Crear Malla Base
-Esce_Global <- expand.grid(N = N, alpha = alpha_des, beta = beta_des, 
-                           AQL = AQL, LTPD = LTPD)
-Esce_Global <- Esce_Global[Esce_Global$AQL < Esce_Global$LTPD, ]
-rownames(Esce_Global) <- NULL
 
-# 3.2 Adicionar columnas para el plan clásico (Kiermeier)
-Esce_Global$n_clasico <- NA
-Esce_Global$c_clasico <- NA
 
-# 2. Opción A: Base R con mapply (Rápido, limpio y sin librerías extra)
-# Pasa las columnas directamente como vectores
-res <- mapply(
-  FUN = calcular_kiermeier,
-  N = Esce_Global$N,
-  AQL = Esce_Global$AQL,
-  LTPD = Esce_Global$LTPD,
-  alpha = Esce_Global$alpha_des,
-  beta = Esce_Global$beta_des
-)
+source("Clasic_plans_kiermeier.R", encoding = "UTF-8")
 
-# 3. Asignar resultados transponiendo la matriz de retorno
-Esce_Global$n_clasico <- res["n", ]
-Esce_Global$c_clasico <- res["c", ]
 
 
 # --- 4. OBJETIVO 1: ELICITACIÓN Y EXTRACCIÓN ---
